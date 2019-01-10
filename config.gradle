@@ -1,0 +1,23 @@
+def addRepos(RepositoryHandler handler){
+    handler.maven { url 'https://maven.aliyun.com/repository/google' }
+    handler.maven { url 'https://maven.aliyun.com/repository/jcenter' }
+}
+ext.addRepos = this.&addRepos
+
+
+def versions = [:]
+versions.ijk = '0.8.8'
+versions.videocache  = '2.7.0'
+
+def deps = [:]
+def ijk = [:]
+ijk.java                    = "tv.danmaku.ijk.media:ijkplayer-java:$versions.ijk"
+ijk.armv7a                  = "tv.danmaku.ijk.media:ijkplayer-armv7a:$versions.ijk"
+ijk.arm64                   = "tv.danmaku.ijk.media:ijkplayer-arm64:$versions.ijk"
+ijk.armv5                   = "tv.danmaku.ijk.media:ijkplayer-armv5:$versions.ijk"
+ijk.exo                     = "tv.danmaku.ijk.media:ijkplayer-exo:$versions.ijk"
+deps.ijk = ijk
+
+deps.videocache             = "com.danikula:videocache:$versions.videocache"
+
+ext.deps = deps
