@@ -9,8 +9,10 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.support.annotation.NonNull;
+import android.view.Surface;
 
 import com.danikula.videocache.CacheListener;
+import com.danikula.videocache.HttpProxyCacheServer;
 import com.winton.player.listener.VideoPlayerListener;
 import com.winton.player.model.VideoModel;
 import com.winton.player.utils.Debuger;
@@ -74,6 +76,7 @@ class Player implements IPlayer,
      * 是否需要静音
      */
     private boolean needMute;
+
     /**
      * 播放速度
      */
@@ -82,12 +85,23 @@ class Player implements IPlayer,
     /**
      * 缓冲比例
      */
-    private int buffterPoint;
+    private int bufferPoint;
+    /**
+     * 是否需要缓存
+     */
+    private int needCache;
+    /**
+     * 缓存代理
+     */
+    private HttpProxyCacheServer cacheServer;
     /**
      * 视频的长宽
      */
     private int currentVideoWidth;
     private int currentVideoHeight;
+    /**
+     * 缓存代理
+     */
 
     private static final int HANDLER_PREPARE = 0;
 
@@ -109,6 +123,8 @@ class Player implements IPlayer,
     @Status
     private int status;
 
+    private String currentUrl = "";
+
     private class PlayerHandler extends Handler{
         PlayerHandler(Looper looper){
             super(looper);
@@ -120,13 +136,33 @@ class Player implements IPlayer,
                     initVideo(msg);
                     break;
                 case HANDLER_SET_DISPLAY:
+                    Surface holder = (Surface)msg.obj;
+                    initDisplay(holder);
                     break;
                 case HANDLER_RELEASE:
+                    if(mMediaPlayer != null){
+                        mMediaPlayer.release();
+                    }
+                    if(cacheServer != null){
+                        cacheServer.unregisterCacheListener(Player.this);
+                    }
+                    bufferPoint = 0;
+                    cancelTimeOutBuffer();
                     break;
                 default:break;
             }
 
             super.handleMessage(msg);
+        }
+    }
+
+    /**
+     * 设置显示区域
+     * @param holder
+     */
+    private void initDisplay(Surface holder) {
+        if(mMediaPlayer != null && holder.isValid()){
+            mMediaPlayer.setSurface(holder);
         }
     }
 
@@ -138,13 +174,13 @@ class Player implements IPlayer,
             currentVideoWidth = 0;
             currentVideoHeight = 0;
             VideoModel model = (VideoModel) msg.obj;
+            currentUrl = model.getUrl();
             mMediaPlayer.setDataSource(mContext,Uri.parse(model.getUrl()),model.getMapHeadData());
             mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
             mMediaPlayer.prepareAsync();
         }catch (Exception e){
             Debuger.printfError(TAG,e);
         }
-
     }
 
     /**
@@ -154,6 +190,17 @@ class Player implements IPlayer,
     private Player(Context context,int playerType){
         this.playerType = playerType;
         this.mContext = context;
+        initPlayer(context,playerType);
+        init();
+        initListener();
+    }
+
+    /**
+     * 初始化播放器
+     * @param context
+     * @param playerType
+     */
+    private void initPlayer(Context context,int playerType){
         switch (playerType){
             case PLAYER__IjkExoMediaPlayer:
                 mMediaPlayer = new IjkExoMediaPlayer(context);
@@ -167,12 +214,11 @@ class Player implements IPlayer,
                 initIjkPlayer(ijkMediaPlayer);
                 mMediaPlayer = ijkMediaPlayer;
                 break;
-                default:break;
+            default:break;
         }
         mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         mMediaPlayer = new TextureMediaPlayer(mMediaPlayer);
-        init();
-        initListener();
+        status = STATUS_INIT;
     }
 
     private void init(){
@@ -225,10 +271,10 @@ class Player implements IPlayer,
             @Override
             public void run() {
                 if(videoPlayerListener != null){
-                    if(percent > buffterPoint){
+                    if(percent > bufferPoint){
                         videoPlayerListener.onBufferingUpdate(percent);
                     }else {
-                        videoPlayerListener.onBufferingUpdate(buffterPoint);
+                        videoPlayerListener.onBufferingUpdate(bufferPoint);
                     }
                 }
             }
@@ -385,7 +431,7 @@ class Player implements IPlayer,
 
     @Override
     public void start() {
-        if(mMediaPlayer != null){
+        if(mMediaPlayer != null && status != STATUS_RELEASE){
             status = STATUS_STARTING;
             mMediaPlayer.start();
         }
@@ -453,6 +499,26 @@ class Player implements IPlayer,
         if(playerType == PLAYER__IjkMediaPlayer && mMediaPlayer != null){
             ((IjkMediaPlayer)mMediaPlayer).setSpeed(speed);
         }
+    }
+
+    @Override
+    public void setLoop(boolean loop) {
+        if(mMediaPlayer != null){
+            mMediaPlayer.setLooping(loop);
+        }
+    }
+
+    @Override
+    public void release() {
+        mWorkHandler.sendEmptyMessage(HANDLER_RELEASE);
+    }
+
+    @Override
+    public void setDisplay(Surface holder) {
+        Message msg = mWorkHandler.obtainMessage();
+        msg.what = HANDLER_SET_DISPLAY;
+        msg.obj = holder;
+        mWorkHandler.sendMessage(msg);
     }
 
     /**

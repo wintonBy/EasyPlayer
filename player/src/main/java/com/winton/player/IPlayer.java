@@ -1,5 +1,7 @@
 package com.winton.player;
 
+import android.view.Surface;
+
 import com.winton.player.listener.VideoPlayerListener;
 
 import java.io.IOException;
@@ -24,6 +26,8 @@ public interface IPlayer {
     int STATUS_STARTING = 1;
     int STATUS_PAUSE = 2;
     int STATUS_STOP = 3;
+    int STATUS_ERROR = 4;
+    int STATUS_RELEASE = 5;
 
     /**
      * 设置播放器监听器
@@ -86,5 +90,22 @@ public interface IPlayer {
      * @param speed
      */
     void setSpeed(float speed);
+
+    /**
+     * 设置单曲循环
+     * @param loop
+     */
+    void setLoop(boolean loop);
+
+    /**
+     * 释放播放器
+     */
+    void release();
+
+    /**
+     * 设置显示区域
+     * @param holder
+     */
+    void setDisplay(Surface holder);
 
 }
