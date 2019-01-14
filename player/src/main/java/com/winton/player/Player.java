@@ -9,10 +9,12 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.support.annotation.NonNull;
+import android.util.Log;
 import android.view.Surface;
 
 import com.danikula.videocache.CacheListener;
 import com.danikula.videocache.HttpProxyCacheServer;
+import com.winton.player.cache.CacheHelper;
 import com.winton.player.listener.VideoPlayerListener;
 import com.winton.player.model.VideoModel;
 import com.winton.player.utils.Debuger;
@@ -89,11 +91,7 @@ class Player implements IPlayer,
     /**
      * 是否需要缓存
      */
-    private int needCache;
-    /**
-     * 缓存代理
-     */
-    private HttpProxyCacheServer cacheServer;
+    private boolean needCache;
     /**
      * 视频的长宽
      */
@@ -143,15 +141,14 @@ class Player implements IPlayer,
                     if(mMediaPlayer != null){
                         mMediaPlayer.release();
                     }
-                    if(cacheServer != null){
-                        cacheServer.unregisterCacheListener(Player.this);
+                    if(getProxy() != null && needCache){
+                        getProxy().unregisterCacheListener(Player.this,currentUrl);
                     }
                     bufferPoint = 0;
                     cancelTimeOutBuffer();
                     break;
                 default:break;
             }
-
             super.handleMessage(msg);
         }
     }
@@ -178,6 +175,7 @@ class Player implements IPlayer,
             mMediaPlayer.setDataSource(mContext,Uri.parse(model.getUrl()),model.getMapHeadData());
             mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
             mMediaPlayer.prepareAsync();
+            Log.d("winton","url ready 装载");
         }catch (Exception e){
             Debuger.printfError(TAG,e);
         }
@@ -401,12 +399,16 @@ class Player implements IPlayer,
 
     @Override
     public void onCacheAvailable(File cacheFile, String url, int percentsAvailable) {
-
+        bufferPoint = percentsAvailable;
     }
 
     @Override
     public void setPlayerListener(VideoPlayerListener listener) {
         this.videoPlayerListener = listener;
+    }
+
+    private HttpProxyCacheServer getProxy(){
+        return CacheHelper.getInstance(mContext).getProxy();
     }
 
     @Override
@@ -417,6 +419,11 @@ class Player implements IPlayer,
     @Override
     public void url(String url, Map<String, String> head){
         VideoModel model = new VideoModel();
+        if(needCache){
+            url = getProxy().getProxyUrl(url,false);
+            getProxy().registerCacheListener(this,url);
+        }
+        currentUrl = url;
         model.setUrl(url);
         if(head != null){
             model.setMapHeadData(head);
@@ -519,6 +526,18 @@ class Player implements IPlayer,
         msg.what = HANDLER_SET_DISPLAY;
         msg.obj = holder;
         mWorkHandler.sendMessage(msg);
+    }
+
+    @Override
+    public void setNeedMute(boolean needMute) {
+        this.needMute = needMute;
+        if(mMediaPlayer != null){
+            if(needMute){
+                mMediaPlayer.setVolume(0,0);
+            }else {
+                mMediaPlayer.setVolume(1,1);
+            }
+        }
     }
 
     /**

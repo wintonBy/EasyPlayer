@@ -4,7 +4,6 @@ import android.view.Surface;
 
 import com.winton.player.listener.VideoPlayerListener;
 
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -41,6 +40,11 @@ public interface IPlayer {
      */
     void url(String url);
 
+    /**
+     * 设置播放地址
+     * @param url
+     * @param head
+     */
     void url(String url , Map<String,String> head);
 
     /**
@@ -108,4 +112,9 @@ public interface IPlayer {
      */
     void setDisplay(Surface holder);
 
+    /**
+     * 设置静音
+     * @param needMute
+     */
+    void setNeedMute(boolean needMute);
 }
