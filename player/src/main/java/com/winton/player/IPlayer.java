@@ -43,9 +43,24 @@ public interface IPlayer {
     /**
      * 设置播放地址
      * @param url
+     * @param needCache
+     */
+    void url(String url,boolean needCache);
+
+    /**
+     * 设置播放地址
+     * @param url
      * @param head
      */
     void url(String url , Map<String,String> head);
+
+    /**
+     * 设置播放地址
+     * @param url
+     * @param head
+     * @param needCache
+     */
+    void url(String url,Map<String,String> head,boolean needCache);
 
     /**
      * 开始播放

@@ -20,7 +20,7 @@ public class CacheHelper {
 
     private CacheHelper(Context context){
         mConfig = new CacheConfig();
-        context = mContext;
+        mContext = context;
     }
 
     public static CacheHelper getInstance(Context context){

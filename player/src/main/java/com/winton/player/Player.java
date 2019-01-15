@@ -91,7 +91,7 @@ class Player implements IPlayer,
     /**
      * 是否需要缓存
      */
-    private boolean needCache;
+    private boolean needCache  = true;
     /**
      * 视频的长宽
      */
@@ -158,7 +158,7 @@ class Player implements IPlayer,
      * @param holder
      */
     private void initDisplay(Surface holder) {
-        if(mMediaPlayer != null && holder.isValid()){
+        if(mMediaPlayer != null && holder != null&&holder.isValid()){
             mMediaPlayer.setSurface(holder);
         }
     }
@@ -417,8 +417,19 @@ class Player implements IPlayer,
     }
 
     @Override
+    public void url(String url, boolean needCache) {
+        url(url,null,needCache);
+    }
+
+    @Override
     public void url(String url, Map<String, String> head){
+        url(url,head,true);
+    }
+
+    @Override
+    public void url(String url, Map<String, String> head, boolean needCache) {
         VideoModel model = new VideoModel();
+        this.needCache = needCache;
         if(needCache){
             url = getProxy().getProxyUrl(url,false);
             getProxy().registerCacheListener(this,url);
