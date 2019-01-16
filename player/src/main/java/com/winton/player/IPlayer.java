@@ -71,10 +71,6 @@ public interface IPlayer {
      */
     void pause();
     /**
-     * 恢复播放
-     */
-    void resume();
-    /**
      * 停止播放
      */
     void stop();
@@ -123,9 +119,9 @@ public interface IPlayer {
 
     /**
      * 设置显示区域
-     * @param holder
+     * @param surface
      */
-    void setDisplay(Surface holder);
+    void setDisplay(Surface surface);
 
     /**
      * 设置静音

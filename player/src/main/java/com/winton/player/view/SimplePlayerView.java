@@ -7,12 +7,14 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
 
+import com.winton.player.view.iview.ISPlayerView;
+
 /**
  * @author: winton
  * @time: 2019/1/15 7:41 PM
  * @desc: 最简单的播控，只能播放
  */
-public class SimplePlayerView extends FrameLayout implements IEasyPlayerView{
+public class SimplePlayerView extends FrameLayout implements ISPlayerView {
 
     private SurfaceView surfaceView;
     private SurfaceHolder surfaceHolder;

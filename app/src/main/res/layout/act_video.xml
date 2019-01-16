@@ -3,7 +3,7 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-    <com.winton.player.view.SimplePlayerView
+    <com.winton.player.view.EasyPlayerView
         android:id="@+id/player"
         android:layout_width="match_parent"
         android:layout_height="250dp" />

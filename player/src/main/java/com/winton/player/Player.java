@@ -11,6 +11,7 @@ import android.os.Message;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.Surface;
+import android.view.SurfaceHolder;
 
 import com.danikula.videocache.CacheListener;
 import com.danikula.videocache.HttpProxyCacheServer;
@@ -43,7 +44,7 @@ class Player implements IPlayer,
         IMediaPlayer.OnSeekCompleteListener,
         CacheListener {
 
-    private final String TAG = getClass().getSimpleName();
+    private final String TAG = "test";
 
     /**
      * MediaPlayer
@@ -91,7 +92,7 @@ class Player implements IPlayer,
     /**
      * 是否需要缓存
      */
-    private boolean needCache  = true;
+    private boolean needCache  = false;
     /**
      * 视频的长宽
      */
@@ -106,6 +107,8 @@ class Player implements IPlayer,
     private static final int HANDLER_SET_DISPLAY = 1;
 
     private static final int HANDLER_RELEASE = 2;
+
+    private static final int HANDLER_PLAY = 3;
     /**
      * 外部超时错误码
      */
@@ -135,6 +138,7 @@ class Player implements IPlayer,
                     break;
                 case HANDLER_SET_DISPLAY:
                     Surface holder = (Surface)msg.obj;
+                    Log.d(TAG,"display"+holder);
                     initDisplay(holder);
                     break;
                 case HANDLER_RELEASE:
@@ -146,6 +150,9 @@ class Player implements IPlayer,
                     }
                     bufferPoint = 0;
                     cancelTimeOutBuffer();
+                    break;
+                case HANDLER_PLAY:
+                    mMediaPlayer.start();
                     break;
                 default:break;
             }
@@ -175,7 +182,6 @@ class Player implements IPlayer,
             mMediaPlayer.setDataSource(mContext,Uri.parse(model.getUrl()),model.getMapHeadData());
             mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
             mMediaPlayer.prepareAsync();
-            Log.d("winton","url ready 装载");
         }catch (Exception e){
             Debuger.printfError(TAG,e);
         }
@@ -451,7 +457,7 @@ class Player implements IPlayer,
     public void start() {
         if(mMediaPlayer != null && status != STATUS_RELEASE){
             status = STATUS_STARTING;
-            mMediaPlayer.start();
+            mWorkHandler.sendEmptyMessageDelayed(HANDLER_PLAY,200);
         }
     }
 
@@ -460,14 +466,6 @@ class Player implements IPlayer,
         if(mMediaPlayer != null && status == STATUS_STARTING){
             status = STATUS_PAUSE;
             mMediaPlayer.pause();
-        }
-    }
-
-    @Override
-    public void resume() {
-        if(mMediaPlayer != null && status == STATUS_PAUSE){
-            status = STATUS_STARTING;
-            mMediaPlayer.start();
         }
     }
 
@@ -532,10 +530,10 @@ class Player implements IPlayer,
     }
 
     @Override
-    public void setDisplay(Surface holder) {
+    public void setDisplay(Surface surface) {
         Message msg = mWorkHandler.obtainMessage();
         msg.what = HANDLER_SET_DISPLAY;
-        msg.obj = holder;
+        msg.obj = surface;
         mWorkHandler.sendMessage(msg);
     }
 

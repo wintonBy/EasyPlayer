@@ -7,7 +7,7 @@ ext.addRepos = this.&addRepos
 
 def versions = [:]
 versions.ijk = '0.8.8'
-versions.videocache  = '2.7.0'
+versions.videocache  = '2.7.1'
 
 def deps = [:]
 def ijk = [:]

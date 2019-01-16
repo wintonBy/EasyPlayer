@@ -4,12 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
     <LinearLayout
-        android:background="@android:color/holo_blue_dark"
+        android:background="@drawable/easy_bottom_control_ui_bg"
         android:orientation="horizontal"
         android:layout_gravity="bottom"
         android:layout_width="match_parent"
         android:layout_height="60dp">
         <ImageView
+            android:id="@+id/iv_small_play"
             android:scaleType="fitXY"
             android:padding="15dp"
             android:src="@drawable/easy_icon_pause"
@@ -42,6 +43,7 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent" />
         <ImageView
+            android:id="@+id/iv_full_screen"
             android:padding="15dp"
             android:src="@drawable/easy_icon_full_screen"
             android:scaleType="fitXY"

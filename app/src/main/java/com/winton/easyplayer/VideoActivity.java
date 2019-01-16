@@ -4,10 +4,12 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
-import android.view.SurfaceView;
+import android.view.View;
 
 import com.winton.player.EasyPlayer;
 import com.winton.player.IPlayer;
+import com.winton.player.listener.VideoPlayerListenerAdapter;
+import com.winton.player.view.EasyPlayerView;
 import com.winton.player.view.SimplePlayerView;
 
 /**
@@ -19,9 +21,10 @@ public class VideoActivity extends Activity implements SurfaceHolder.Callback {
 
     String testUrl = "http://9890.vod.myqcloud.com/9890_4e292f9a3dd011e6b4078980237cc3d3.f20.mp4";
 
-    private SimplePlayerView simplePlayerView;
+    private EasyPlayerView simplePlayerView;
     private SurfaceHolder holder;
     private IPlayer mPlayer;
+
 
     @Override
     protected void onCreate( Bundle savedInstanceState) {
@@ -30,18 +33,12 @@ public class VideoActivity extends Activity implements SurfaceHolder.Callback {
         simplePlayerView = findViewById(R.id.player);
         mPlayer = EasyPlayer.newInstance(this,IPlayer.PLAYER__IjkMediaPlayer);
         mPlayer.url(testUrl);
+        mPlayer.setPlayerListener(new VideoPlayerListenerAdapter(){
+            
+        });
         holder = simplePlayerView.getSurface().getHolder();
         holder.addCallback(this);
         Log.d("winton","url 装载");
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if(holder != null){
-            mPlayer.setDisplay(holder.getSurface());
-            mPlayer.start();
-        }
     }
 
     @Override
@@ -52,19 +49,20 @@ public class VideoActivity extends Activity implements SurfaceHolder.Callback {
         }
     }
 
-//    @Override
-//    protected void onStop() {
-//        super.onStop();
-//        if(mPlayer != null){
-//            mPlayer.stop();
-//        }
-//    }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mPlayer.stop();
+        mPlayer.release();
+        mPlayer = null;
+    }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         this.holder = holder;
         mPlayer.setDisplay(holder.getSurface());
         mPlayer.start();
+
     }
 
     @Override
@@ -78,4 +76,8 @@ public class VideoActivity extends Activity implements SurfaceHolder.Callback {
         mPlayer.setDisplay(null);
     }
 
+    @Override
+    public void onBackPressed() {
+        mPlayer.start();
+    }
 }
