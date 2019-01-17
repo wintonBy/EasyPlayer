@@ -21,6 +21,8 @@ import com.winton.player.model.VideoModel;
 import com.winton.player.utils.Debuger;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import tv.danmaku.ijk.media.exo.IjkExoMediaPlayer;
@@ -53,7 +55,7 @@ class Player implements IPlayer,
     /**
      * 播放器监听
      */
-    private VideoPlayerListener videoPlayerListener;
+    private List<VideoPlayerListener> videoPlayerListeners;
     /**
      * 主线程Handler
      */
@@ -274,11 +276,13 @@ class Player implements IPlayer,
         mMainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
-                if(videoPlayerListener != null){
-                    if(percent > bufferPoint){
-                        videoPlayerListener.onBufferingUpdate(percent);
-                    }else {
-                        videoPlayerListener.onBufferingUpdate(bufferPoint);
+                if(videoPlayerListeners != null){
+                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
+                        if(percent > bufferPoint){
+                            videoPlayerListener.onBufferingUpdate(percent);
+                        }else {
+                            videoPlayerListener.onBufferingUpdate(bufferPoint);
+                        }
                     }
                 }
             }
@@ -297,8 +301,10 @@ class Player implements IPlayer,
                         cancelTimeOutBuffer();
                     }
                 }
-                if(videoPlayerListener != null){
-                    videoPlayerListener.onInfo(what,extra);
+                if(videoPlayerListeners != null){
+                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
+                        videoPlayerListener.onInfo(what,extra);
+                    }
                 }
             }
         });
@@ -311,8 +317,10 @@ class Player implements IPlayer,
             @Override
             public void run() {
                 cancelTimeOutBuffer();
-                if(videoPlayerListener != null){
-                    videoPlayerListener.onAutoCompletion();
+                if(videoPlayerListeners != null){
+                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
+                        videoPlayerListener.onAutoCompletion();
+                    }
                 }
             }
         });
@@ -324,8 +332,10 @@ class Player implements IPlayer,
             @Override
             public void run() {
                 cancelTimeOutBuffer();
-                if(videoPlayerListener != null){
-                    videoPlayerListener.onError(what,extra);
+                if(videoPlayerListeners != null){
+                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
+                        videoPlayerListener.onError(what,extra);
+                    }
                 }
             }
         });
@@ -338,8 +348,10 @@ class Player implements IPlayer,
             @Override
             public void run() {
                 cancelTimeOutBuffer();
-                if(videoPlayerListener != null){
-                    videoPlayerListener.onPrepared();
+                if(videoPlayerListeners != null){
+                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
+                        videoPlayerListener.onPrepared();
+                    }
                 }
             }
         });
@@ -351,8 +363,10 @@ class Player implements IPlayer,
             @Override
             public void run() {
                 cancelTimeOutBuffer();
-                if(videoPlayerListener != null){
-                    videoPlayerListener.onSeekComplete();
+                if(videoPlayerListeners != null){
+                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
+                        videoPlayerListener.onSeekComplete();
+                    }
                 }
             }
         });
@@ -365,8 +379,10 @@ class Player implements IPlayer,
         mMainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
-                if(videoPlayerListener != null){
-                    videoPlayerListener.onVideoSizeChanged(width,height,sarNum,sarDen);
+                if(videoPlayerListeners != null){
+                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners){
+                        videoPlayerListener.onVideoSizeChanged(width,height,sarNum,sarDen);
+                    }
                 }
             }
         });
@@ -397,8 +413,10 @@ class Player implements IPlayer,
         @Override
         public void run() {
             Debuger.printfError("request time out");
-            if(videoPlayerListener != null){
-                videoPlayerListener.onError(BUFFER_TIME_OUT_ERROR,BUFFER_TIME_OUT_ERROR);
+            if(videoPlayerListeners != null){
+                for(VideoPlayerListener videoPlayerListener:videoPlayerListeners){
+                    videoPlayerListener.onError(BUFFER_TIME_OUT_ERROR,BUFFER_TIME_OUT_ERROR);
+                }
             }
         }
     };
@@ -409,8 +427,24 @@ class Player implements IPlayer,
     }
 
     @Override
-    public void setPlayerListener(VideoPlayerListener listener) {
-        this.videoPlayerListener = listener;
+    public void addPlayerListener(VideoPlayerListener listener) {
+        if(videoPlayerListeners == null){
+            videoPlayerListeners = new ArrayList<>();
+        }
+        if(listener == null){
+            throw new IllegalArgumentException("listener should not be null");
+        }
+        videoPlayerListeners.add(listener);
+    }
+
+    @Override
+    public void removePlayerListener(VideoPlayerListener listener) {
+        if(videoPlayerListeners != null){
+            if(listener == null){
+                throw new IllegalArgumentException("listener should not be null");
+            }
+            videoPlayerListeners.remove(listener);
+        }
     }
 
     private HttpProxyCacheServer getProxy(){
@@ -547,6 +581,11 @@ class Player implements IPlayer,
                 mMediaPlayer.setVolume(1,1);
             }
         }
+    }
+
+    @Override
+    public int getStatus() {
+        return status;
     }
 
     /**

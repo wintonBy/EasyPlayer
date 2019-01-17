@@ -10,7 +10,7 @@ import com.winton.player.EasyPlayer;
 import com.winton.player.IPlayer;
 import com.winton.player.listener.VideoPlayerListenerAdapter;
 import com.winton.player.view.EasyPlayerView;
-import com.winton.player.view.SimplePlayerView;
+import com.winton.player.view.listener.IEasyPlayerViewListener;
 
 /**
  * @author: winton
@@ -31,10 +31,26 @@ public class VideoActivity extends Activity implements SurfaceHolder.Callback {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.act_video);
         simplePlayerView = findViewById(R.id.player);
+        simplePlayerView.setListener(new IEasyPlayerViewListener() {
+            @Override
+            public void onClickPlay(View v) {
+
+            }
+
+            @Override
+            public void onClickFullScreen(View v) {
+
+            }
+
+            @Override
+            public void onClickPlayerView(View v) {
+
+            }
+        });
         mPlayer = EasyPlayer.newInstance(this,IPlayer.PLAYER__IjkMediaPlayer);
         mPlayer.url(testUrl);
         mPlayer.setPlayerListener(new VideoPlayerListenerAdapter(){
-            
+
         });
         holder = simplePlayerView.getSurface().getHolder();
         holder.addCallback(this);

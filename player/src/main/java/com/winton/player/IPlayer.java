@@ -27,12 +27,19 @@ public interface IPlayer {
     int STATUS_STOP = 3;
     int STATUS_ERROR = 4;
     int STATUS_RELEASE = 5;
+    int STATUS_BUFFER = 6;
 
     /**
      * 设置播放器监听器
      * @param listener
      */
-    void setPlayerListener(VideoPlayerListener listener);
+    void addPlayerListener(VideoPlayerListener listener);
+
+    /**
+     * 移除播放器监听
+     * @param listener
+     */
+    void removePlayerListener(VideoPlayerListener listener);
 
     /**
      * 开始播放
@@ -128,4 +135,10 @@ public interface IPlayer {
      * @param needMute
      */
     void setNeedMute(boolean needMute);
+
+    /**
+     * 获取播放器当前当播放状态
+     * @return
+     */
+    int getStatus();
 }

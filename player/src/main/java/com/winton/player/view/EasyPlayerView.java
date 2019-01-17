@@ -2,8 +2,11 @@ package com.winton.player.view;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
+import android.view.Surface;
+import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,20 +17,21 @@ import android.widget.TextView;
 
 import com.winton.player.IPlayer;
 import com.winton.player.R;
-import com.winton.player.utils.Debuger;
+import com.winton.player.listener.VideoPlayerListener;
+import com.winton.player.listener.VideoPlayerListenerAdapter;
 import com.winton.player.view.iview.IEasyPlayerView;
-import com.winton.player.view.iview.ISPlayerView;
+import com.winton.player.view.listener.IEasyPlayerViewListener;
+
+import java.util.Map;
 
 /**
  * @author: winton
  * @time: 2019/1/15 2:04 PM
  * @desc: 播控基类
  */
-public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.OnClickListener,View.OnTouchListener,SeekBar.OnSeekBarChangeListener {
+public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.OnClickListener,View.OnTouchListener,SeekBar.OnSeekBarChangeListener,SurfaceHolder.Callback {
 
     private static final String TAG = "EasyPlayerView";
-
-    private IPlayer player;
 
     private View playerView;
 
@@ -43,6 +47,10 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
 
     private TextView mTVTotalView;
 
+    private IEasyPlayerViewListener listener;
+
+    private PlayerProxy mPlayerProxy;
+
     public EasyPlayerView(Context context) {
         this(context,null);
     }
@@ -54,18 +62,20 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
 
     private void init(Context context, AttributeSet attrs){
         try{
-            playerView = LayoutInflater.from(context).inflate(getPlayerLayoutId(),null);
+            playerView = LayoutInflater.from(context).inflate(R.layout.easy_layout_base_player,null);
             surfaceView = new SurfaceView(context);
             LayoutParams layoutParams = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT);
             this.addView(surfaceView,layoutParams);
             this.addView(playerView,layoutParams);
+            surfaceView.getHolder().addCallback(this);
             initView();
         }catch (Exception e){
-            Debuger.printfError(TAG,e);
+            Log.e(TAG, e.toString());
         }
     }
 
     private void initView(){
+        playerView.setOnClickListener(this);
         mIVSmallPlay = playerView.findViewById(R.id.iv_small_play);
         mIVSmallPlay.setOnClickListener(this);
         mIVFullScreen = playerView.findViewById(R.id.iv_full_screen);
@@ -79,12 +89,49 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
     public void onClick(View v) {
         int id = v.getId();
         if(id == R.id.iv_small_play){
+            clickPlay(v);
             return;
         }
         if(id == R.id.iv_full_screen){
+            clickFullScreen(v);
+            return;
+        }
+        if(id == R.id.fl_play_ui){
+            clickPlayUi(v);
             return;
         }
     }
+
+    /**
+     * 点击播控空白处
+     * @param v
+     */
+    private void clickPlayUi(View v) {
+        if(listener != null){
+            listener.onClickPlayerView(v);
+        }
+    }
+
+    /**
+     * 点击播放按钮
+     * @param v
+     */
+    private void clickPlay(View v) {
+        if(listener != null){
+            listener.onClickPlay(v);
+        }
+    }
+
+    /**
+     * 点击全屏按钮
+     * @param v
+     */
+    private void clickFullScreen(View v) {
+        if(listener != null){
+            listener.onClickFullScreen(v);
+        }
+    }
+
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
@@ -105,8 +152,7 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
     public void onStopTrackingTouch(SeekBar seekBar) {
 
     }
-    @Override
-    public void setProgress(int progress) {
+    private void setProgress(int progress) {
         if(mSbProgress != null){
             if(progress <0){
                 progress = 0;
@@ -118,41 +164,64 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
         }
     }
 
-    @Override
-    public void setCurrentTime(String text) {
+    private void setCurrentTime(String text) {
         if(mTVCurrentTime != null && text != null){
             mTVCurrentTime.setText(text);
         }
     }
 
-    @Override
-    public void setTotalTime(String text) {
+    private void setTotalTime(String text) {
         if(mTVTotalView != null && text != null){
             mTVTotalView.setText(text);
         }
     }
 
-    @Override
-    public void showControlUi(boolean show) {
+    private void showControlUi(boolean show) {
 
     }
+
 
     @Override
     public SurfaceView getSurface() {
         return surfaceView;
     }
 
-    public int getPlayerLayoutId() {
-        return R.layout.easy_layout_base_player;
+    @Override
+    public void setupPlayer(IPlayer player) {
+        player.addPlayerListener(new VideoPlayerListenerAdapter(){
+            @Override
+            public void onPrepared() {
+                super.onPrepared();
+
+            }
+        });
+        mPlayerProxy = new PlayerProxy(player);
+
     }
 
     @Override
-    public void registerPlayer(IPlayer player) {
-        this.player = player;
+    public void setListener(IEasyPlayerViewListener listener) {
+        this.listener = listener;
     }
 
     @Override
-    public void release() {
-        this.player = null;
+    public void surfaceCreated(SurfaceHolder holder) {
+        if(holder != null && mPlayerProxy != null){
+            mPlayerProxy.setDisplay(holder.getSurface());
+        }
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        if(holder != null && mPlayerProxy != null){
+            mPlayerProxy.setDisplay(holder.getSurface());
+        }
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        if(mPlayerProxy != null){
+            mPlayerProxy.setDisplay(null);
+        }
     }
 }
