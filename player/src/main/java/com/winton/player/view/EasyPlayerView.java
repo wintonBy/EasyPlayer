@@ -5,7 +5,6 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
-import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -17,12 +16,12 @@ import android.widget.TextView;
 
 import com.winton.player.IPlayer;
 import com.winton.player.R;
-import com.winton.player.listener.VideoPlayerListener;
 import com.winton.player.listener.VideoPlayerListenerAdapter;
 import com.winton.player.view.iview.IEasyPlayerView;
 import com.winton.player.view.listener.IEasyPlayerViewListener;
 
-import java.util.Map;
+import static tv.danmaku.ijk.media.player.IMediaPlayer.MEDIA_INFO_BUFFERING_END;
+import static tv.danmaku.ijk.media.player.IMediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START;
 
 /**
  * @author: winton
@@ -117,6 +116,12 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
      * @param v
      */
     private void clickPlay(View v) {
+        int statue = mPlayerProxy.getStatus();
+        if(statue == IPlayer.STATUS_PLAYING){
+            mPlayerProxy.pause();
+        }else {
+            mPlayerProxy.start();
+        }
         if(listener != null){
             listener.onClickPlay(v);
         }
@@ -188,15 +193,21 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
 
     @Override
     public void setupPlayer(IPlayer player) {
-        player.addPlayerListener(new VideoPlayerListenerAdapter(){
+        mPlayerProxy = new PlayerProxy(player);
+        invalidate();
+        mPlayerProxy.addPlayerListener(new VideoPlayerListenerAdapter(){
             @Override
-            public void onPrepared() {
-                super.onPrepared();
-
+            public void onInfo(int what, int extra) {
+                switch (what){
+                    case MEDIA_INFO_VIDEO_RENDERING_START:
+                        //开始缓冲
+                        break;
+                    case MEDIA_INFO_BUFFERING_END:
+                        //缓冲结束
+                        break;
+                }
             }
         });
-        mPlayerProxy = new PlayerProxy(player);
-
     }
 
     @Override
@@ -223,5 +234,9 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
         if(mPlayerProxy != null){
             mPlayerProxy.setDisplay(null);
         }
+    }
+
+    public PlayerProxy getPlayer(){
+        return mPlayerProxy;
     }
 }

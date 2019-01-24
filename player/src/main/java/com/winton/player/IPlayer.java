@@ -15,19 +15,20 @@ public interface IPlayer {
     /**
      * 支持的播放器类型
      */
-    int PLAYER__AndroidMediaPlayer = 1;
-    int PLAYER__IjkMediaPlayer = 2;
-    int PLAYER__IjkExoMediaPlayer = 3;
+    int PLAYER__MEDIA = 1;
+    int PLAYER__IJK = 2;
+    int PLAYER__EXO = 3;
     /**
      * 播放器状态
      */
-    int STATUS_INIT = 0;
-    int STATUS_STARTING = 1;
-    int STATUS_PAUSE = 2;
-    int STATUS_STOP = 3;
-    int STATUS_ERROR = 4;
-    int STATUS_RELEASE = 5;
-    int STATUS_BUFFER = 6;
+    int STATUS_ERROR = -1;
+    int STATUS_IDLE = 0;
+    int STATUS_PREPARING = 1;
+    int STATE_PREPARED = 2;
+    int STATUS_PLAYING = 3;
+    int STATUS_PAUSE = 4;
+    int STATUS_COMPLETE = 5;
+
 
     /**
      * 设置播放器监听器
@@ -77,10 +78,6 @@ public interface IPlayer {
      * 暂停播放
      */
     void pause();
-    /**
-     * 停止播放
-     */
-    void stop();
 
     /**
      * 设置音量

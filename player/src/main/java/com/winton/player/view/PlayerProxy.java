@@ -21,8 +21,13 @@ public class PlayerProxy implements IPlayer {
     }
 
     @Override
-    public void setPlayerListener(VideoPlayerListener listener) {
-        mPlayer.setPlayerListener(listener);
+    public void addPlayerListener(VideoPlayerListener listener) {
+        mPlayer.addPlayerListener(listener);
+    }
+
+    @Override
+    public void removePlayerListener(VideoPlayerListener listener) {
+        mPlayer.removePlayerListener(listener);
     }
 
     @Override
@@ -54,11 +59,6 @@ public class PlayerProxy implements IPlayer {
     @Override
     public void pause() {
         mPlayer.pause();
-    }
-
-    @Override
-    public void stop() {
-        mPlayer.stop();
     }
 
     @Override

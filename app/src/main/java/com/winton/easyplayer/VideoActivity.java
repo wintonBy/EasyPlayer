@@ -2,28 +2,21 @@ package com.winton.easyplayer;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.SurfaceHolder;
-import android.view.View;
 
 import com.winton.player.EasyPlayer;
 import com.winton.player.IPlayer;
-import com.winton.player.listener.VideoPlayerListenerAdapter;
 import com.winton.player.view.EasyPlayerView;
-import com.winton.player.view.listener.IEasyPlayerViewListener;
 
 /**
  * @author: winton
  * @time: 2019/1/14 3:44 PM
  * @desc: 描述
  */
-public class VideoActivity extends Activity implements SurfaceHolder.Callback {
+public class VideoActivity extends Activity {
 
     String testUrl = "http://9890.vod.myqcloud.com/9890_4e292f9a3dd011e6b4078980237cc3d3.f20.mp4";
 
     private EasyPlayerView simplePlayerView;
-    private SurfaceHolder holder;
-    private IPlayer mPlayer;
 
 
     @Override
@@ -31,69 +24,18 @@ public class VideoActivity extends Activity implements SurfaceHolder.Callback {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.act_video);
         simplePlayerView = findViewById(R.id.player);
-        simplePlayerView.setListener(new IEasyPlayerViewListener() {
-            @Override
-            public void onClickPlay(View v) {
-
-            }
-
-            @Override
-            public void onClickFullScreen(View v) {
-
-            }
-
-            @Override
-            public void onClickPlayerView(View v) {
-
-            }
-        });
-        mPlayer = EasyPlayer.newInstance(this,IPlayer.PLAYER__IjkMediaPlayer);
-        mPlayer.url(testUrl);
-        mPlayer.setPlayerListener(new VideoPlayerListenerAdapter(){
-
-        });
-        holder = simplePlayerView.getSurface().getHolder();
-        holder.addCallback(this);
-        Log.d("winton","url 装载");
+        simplePlayerView.setupPlayer(EasyPlayer.newInstance(this,IPlayer.PLAYER__IJK));
+        simplePlayerView.getPlayer().url(testUrl);
+        simplePlayerView.getPlayer().start();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        if(mPlayer != null){
-            mPlayer.pause();
-        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mPlayer.stop();
-        mPlayer.release();
-        mPlayer = null;
-    }
-
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-        this.holder = holder;
-        mPlayer.setDisplay(holder.getSurface());
-        mPlayer.start();
-
-    }
-
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        this.holder = null;
-        mPlayer.setDisplay(null);
-    }
-
-    @Override
-    public void onBackPressed() {
-        mPlayer.start();
     }
 }
