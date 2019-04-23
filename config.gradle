@@ -16,6 +16,8 @@ ijk.armv7a                  = "tv.danmaku.ijk.media:ijkplayer-armv7a:$versions.i
 ijk.arm64                   = "tv.danmaku.ijk.media:ijkplayer-arm64:$versions.ijk"
 ijk.armv5                   = "tv.danmaku.ijk.media:ijkplayer-armv5:$versions.ijk"
 ijk.exo                     = "tv.danmaku.ijk.media:ijkplayer-exo:$versions.ijk"
+ijk.x86                     = "tv.danmaku.ijk.media:ijkplayer-x86:$versions.ijk"
+ijk.x86_64                  = "tv.danmaku.ijk.media:ijkplayer-x86_64:$versions.ijk"
 deps.ijk = ijk
 
 deps.videocache             = "com.danikula:videocache:$versions.videocache"

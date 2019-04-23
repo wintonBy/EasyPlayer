@@ -14,6 +14,7 @@ android {
                 cppFlags ""
             }
         }
+
     }
     buildTypes {
         release {
@@ -26,6 +27,7 @@ android {
             path "CMakeLists.txt"
         }
     }
+
 }
 
 dependencies {
