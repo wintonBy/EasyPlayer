@@ -1,3 +1,4 @@
+apply plugin: 'maven-publish'
 apply plugin: 'com.android.library'
 
 android {
@@ -48,4 +49,20 @@ dependencies {
     implementation deps.ijk.exo
 
     implementation deps.videocache
+}
+publishing {
+    repositories {
+        maven {
+            url '~/.m2/repository'
+        }
+    }
+
+    publications {
+        maven(MavenPublication) {
+            artifact "build/outputs/aar/player-release.aar"
+            groupId "com.winton"
+            artifactId "EasyPlayer"
+            version "1.0.0"
+        }
+    }
 }
