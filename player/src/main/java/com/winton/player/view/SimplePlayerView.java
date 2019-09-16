@@ -326,7 +326,16 @@ public class SimplePlayerView extends TextureView implements VideoControl {
                    }
                }
            }
+       }
 
+       @Override
+       public void onVideoSizeChanged(IPlayer player, int i, int i1, int i2, int i3) {
+           mVideoWidth = i;
+           mVideoHeight = i1;
+           if (mSurfaceTexture != null) {
+               mSurfaceTexture.setDefaultBufferSize(mVideoWidth, mVideoHeight);
+               requestLayout();
+           }
        }
    };
 }
