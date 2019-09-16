@@ -5,7 +5,9 @@ import android.os.Bundle;
 
 import com.winton.player.EasyPlayer;
 import com.winton.player.IPlayer;
+import com.winton.player.model.VideoData;
 import com.winton.player.view.EasyPlayerView;
+import com.winton.player.view.SimplePlayerView;
 
 /**
  * @author: winton
@@ -16,7 +18,7 @@ public class VideoActivity extends Activity {
 
     String testUrl = "http://9890.vod.myqcloud.com/9890_4e292f9a3dd011e6b4078980237cc3d3.f20.mp4";
 
-    private EasyPlayerView simplePlayerView;
+    private SimplePlayerView simplePlayerView;
 
 
     @Override
@@ -24,9 +26,8 @@ public class VideoActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.act_video);
         simplePlayerView = findViewById(R.id.player);
-        simplePlayerView.setupPlayer(EasyPlayer.newInstance(this,IPlayer.PLAYER__IJK));
-        simplePlayerView.getPlayer().url(testUrl);
-        simplePlayerView.getPlayer().start();
+        simplePlayerView.setVideoData(new VideoData.Builder(VideoData.TYPE_NETWORK).url(testUrl).build());
+        simplePlayerView.start();
     }
 
     @Override

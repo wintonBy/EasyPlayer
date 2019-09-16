@@ -14,19 +14,20 @@ import android.view.Surface;
 import com.danikula.videocache.CacheListener;
 import com.danikula.videocache.HttpProxyCacheServer;
 import com.winton.player.cache.CacheHelper;
-import com.winton.player.listener.VideoPlayerListener;
-import com.winton.player.model.VideoModel;
+import com.winton.player.listener.PlayerListener;
+import com.winton.player.model.VideoData;
+import com.winton.player.model.VideoFile;
+import com.winton.player.model.VideoNetwork;
+import com.winton.player.model.VideoUri;
 import com.winton.player.utils.Debuger;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 import tv.danmaku.ijk.media.exo.IjkExoMediaPlayer;
 import tv.danmaku.ijk.media.player.AndroidMediaPlayer;
 import tv.danmaku.ijk.media.player.IMediaPlayer;
 import tv.danmaku.ijk.media.player.IjkMediaPlayer;
+import tv.danmaku.ijk.media.player.MediaInfo;
 import tv.danmaku.ijk.media.player.TextureMediaPlayer;
 
 /**
@@ -44,7 +45,7 @@ class Player implements IPlayer,
         IMediaPlayer.OnSeekCompleteListener,
         CacheListener {
 
-    private final String TAG = "test";
+    private final String TAG = "Player";
 
     /**
      * MediaPlayer
@@ -53,7 +54,7 @@ class Player implements IPlayer,
     /**
      * 播放器监听
      */
-    private List<VideoPlayerListener> videoPlayerListeners;
+    private PlayerListener mPlayerListener;
     /**
      * 主线程Handler
      */
@@ -62,15 +63,13 @@ class Player implements IPlayer,
      * 工作线程
      */
     private PlayerHandler mWorkHandler;
-    private HandlerThread mWorkThread;
     /**
      * 播放超时
      */
-    private int timeOut = 10 * 1000;
-    /**
-     * 是否需要监听播放超时
-     */
-    private boolean needTimeOutOther = true;
+    private int mTimeout = 10 * 1000;
+    private boolean mNeedTimeout = false;
+
+
     /**
      * 上下文环境
      */
@@ -78,11 +77,11 @@ class Player implements IPlayer,
     /**
      * 是否需要静音
      */
-    private boolean needMute;
+    private boolean mMute;
     /**
      * 播放速度
      */
-    private float speed = 1.0f;
+    private float mSpeed = 1.0f;
 
     /**
      * 缓冲比例
@@ -101,10 +100,11 @@ class Player implements IPlayer,
      * 缓存代理
      */
 
-    private static final int HANDLER_PREPARE = 0;
-    private static final int HANDLER_SET_DISPLAY = 1;
-    private static final int HANDLER_RELEASE = 2;
-    private static final int HANDLER_PLAY = 3;
+    private static final int HANDLER_PREPARE            = 0;
+    private static final int HANDLER_SET_DISPLAY        = 1;
+    private static final int HANDLER_RELEASE            = 2;
+    private static final int HANDLER_PLAY               = 3;
+    private static final int HANDLER_PAUSE              = 4;
     /**
      * 外部超时错误码
      */
@@ -113,12 +113,12 @@ class Player implements IPlayer,
     /**
      * 播放器类型
      */
-    private final int playerType ;
+    private final int mPlayerType;
     /**
      * 播放器状态
      */
     @Status
-    private int status = STATUS_IDLE;
+    private int mStatus = STATUS_IDLE;
 
     private String currentUrl = "";
 
@@ -130,31 +130,30 @@ class Player implements IPlayer,
         public void handleMessage(Message msg) {
             switch (msg.what){
                 case HANDLER_PREPARE:
+                    mStatus = STATUS_PREPARING;
                     initVideo(msg);
                     break;
                 case HANDLER_SET_DISPLAY:
                     Surface holder = (Surface)msg.obj;
-                    initDisplay(holder);
+                    if(mMediaPlayer != null && holder != null&&holder.isValid()){
+                        mMediaPlayer.setSurface(holder);
+                    }
                     break;
                 case HANDLER_RELEASE:
+                    mStatus = STATUS_END;
                     doRelease();
                     break;
                 case HANDLER_PLAY:
+                    mStatus = STATUS_STARTED;
                     mMediaPlayer.start();
+                    break;
+                case HANDLER_PAUSE :
+                    mStatus = STATUS_PAUSED;
+                    mMediaPlayer.pause();
                     break;
                 default:break;
             }
             super.handleMessage(msg);
-        }
-    }
-
-    /**
-     * 设置显示区域
-     * @param holder
-     */
-    private void initDisplay(Surface holder) {
-        if(mMediaPlayer != null && holder != null&&holder.isValid()){
-            mMediaPlayer.setSurface(holder);
         }
     }
 
@@ -163,7 +162,7 @@ class Player implements IPlayer,
             mMediaPlayer.release();
         }
         if(getProxy() != null && needCache){
-            getProxy().unregisterCacheListener(Player.this,currentUrl);
+            getProxy().unregisterCacheListener(Player.this, currentUrl);
         }
         bufferPoint = 0;
         cancelTimeOutBuffer();
@@ -173,17 +172,25 @@ class Player implements IPlayer,
      */
     private void initVideo(Message msg) {
         try{
+            //make sure player resource available
             doRelease();
-            mMediaPlayer = buildPlayer(mContext,playerType);
+            mMediaPlayer = buildPlayer(mContext, mPlayerType);
             initListener();
             currentVideoWidth = 0;
             currentVideoHeight = 0;
-            VideoModel model = (VideoModel) msg.obj;
-            currentUrl = model.getUrl();
-            mMediaPlayer.setDataSource(mContext,Uri.parse(model.getUrl()),model.getMapHeadData());
+            VideoData model = (VideoData) msg.obj;
+            if (model instanceof VideoNetwork) {
+                mMediaPlayer.setDataSource(mContext, Uri.parse(((VideoNetwork)model).getUrl()), ((VideoNetwork)model).getHeaders());
+            } else if (model instanceof VideoFile) {
+                mMediaPlayer.setDataSource(((VideoFile)model).getData());
+            } else if ( model instanceof VideoUri) {
+                mMediaPlayer.setDataSource(((VideoUri)model).getContext(), ((VideoUri)model).getUri());
+            } else {
+                throw new IllegalArgumentException("unsupported video data");
+            }
+
             mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
             mMediaPlayer.prepareAsync();
-            status = STATUS_PREPARING;
         }catch (Exception e){
             Debuger.printfError(TAG,e);
         }
@@ -193,10 +200,10 @@ class Player implements IPlayer,
      * 构造播放器实例
      * @param playerType
      */
-    private Player(Context context,int playerType){
-        this.playerType = playerType;
+    private Player(Context context, int playerType) {
+        this.mPlayerType = playerType;
         this.mContext = context;
-        mWorkThread = new HandlerThread("player_work_thread");
+        HandlerThread mWorkThread = new HandlerThread("player_work_thread");
         mWorkThread.start();
         mWorkHandler = new PlayerHandler(mWorkThread.getLooper());
         mMainThreadHandler = new Handler();
@@ -216,8 +223,8 @@ class Player implements IPlayer,
                 mediaPlayer = new AndroidMediaPlayer();
                 break;
             case PLAYER__IJK:
-                IjkMediaPlayer ijkMediaPlayer = new IjkMediaPlayer();
-                ijkMediaPlayer.setSpeed(speed);
+                 IjkMediaPlayer ijkMediaPlayer = new IjkMediaPlayer();
+                ijkMediaPlayer.setSpeed(mSpeed);
                 initIjkPlayer(ijkMediaPlayer);
                 mediaPlayer = ijkMediaPlayer;
                 break;
@@ -275,29 +282,16 @@ class Player implements IPlayer,
         }
     }
 
-    /**
-     * 判断当前是否为可播放状态
-     * @return
-     */
-    private boolean isInPlaybackState(){
-        return (mMediaPlayer != null&&
-              status != IPlayer.STATUS_ERROR&&
-              status != IPlayer.STATUS_PREPARING&&
-              status != IPlayer.STATUS_IDLE);
-    }
-
     @Override
     public void onBufferingUpdate(IMediaPlayer iMediaPlayer, final int percent) {
         mMainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
-                if(videoPlayerListeners != null){
-                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
-                        if(percent > bufferPoint){
-                            videoPlayerListener.onBufferingUpdate(percent);
-                        }else {
-                            videoPlayerListener.onBufferingUpdate(bufferPoint);
-                        }
+                if (mPlayerListener != null) {
+                    if (percent > bufferPoint) {
+                        mPlayerListener.onBufferingUpdate(Player.this, percent);
+                    }else {
+                        mPlayerListener.onBufferingUpdate(Player.this, bufferPoint);
                     }
                 }
             }
@@ -309,17 +303,15 @@ class Player implements IPlayer,
         mMainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
-                if(needTimeOutOther){
-                    if(what == MediaPlayer.MEDIA_INFO_BUFFERING_START){
+                if(mNeedTimeout){
+                    if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
                         startTimeOutBuffer();
-                    }else if(what == MediaPlayer.MEDIA_INFO_BUFFERING_END){
+                    } else if(what == MediaPlayer.MEDIA_INFO_BUFFERING_END) {
                         cancelTimeOutBuffer();
                     }
                 }
-                if(videoPlayerListeners != null){
-                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
-                        videoPlayerListener.onInfo(what,extra);
-                    }
+                if (mPlayerListener != null) {
+                    mPlayerListener.onInfo(Player.this, what, extra);
                 }
             }
         });
@@ -328,15 +320,13 @@ class Player implements IPlayer,
 
     @Override
     public void onCompletion(IMediaPlayer iMediaPlayer) {
-        status = STATUS_COMPLETE;
+        mStatus = STATUS_COMPLETED;
         mMainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
                 cancelTimeOutBuffer();
-                if(videoPlayerListeners != null){
-                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
-                        videoPlayerListener.onAutoCompletion();
-                    }
+                if(mPlayerListener != null){
+                    mPlayerListener.onCompletion(Player.this);
                 }
             }
         });
@@ -344,15 +334,13 @@ class Player implements IPlayer,
 
     @Override
     public boolean onError(IMediaPlayer iMediaPlayer, final int what, final int extra) {
-        status = STATUS_ERROR;
+        mStatus = STATUS_ERROR;
         mMainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
                 cancelTimeOutBuffer();
-                if(videoPlayerListeners != null){
-                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
-                        videoPlayerListener.onError(what,extra);
-                    }
+                if (mPlayerListener != null) {
+                    mPlayerListener.onError(Player.this, what, extra);
                 }
             }
         });
@@ -361,15 +349,13 @@ class Player implements IPlayer,
 
     @Override
     public void onPrepared(IMediaPlayer iMediaPlayer) {
-        status = STATE_PREPARED;
+        mStatus = STATUS_PREPARED;
         mMainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
                 cancelTimeOutBuffer();
-                if(videoPlayerListeners != null){
-                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
-                        videoPlayerListener.onPrepared();
-                    }
+                if(mPlayerListener != null){
+                    mPlayerListener.onPrepared(Player.this);
                 }
             }
         });
@@ -381,10 +367,8 @@ class Player implements IPlayer,
             @Override
             public void run() {
                 cancelTimeOutBuffer();
-                if(videoPlayerListeners != null){
-                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners) {
-                        videoPlayerListener.onSeekComplete();
-                    }
+                if (mPlayerListener != null) {
+                    mPlayerListener.onSeekComplete(Player.this);
                 }
             }
         });
@@ -397,10 +381,8 @@ class Player implements IPlayer,
         mMainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
-                if(videoPlayerListeners != null){
-                    for(VideoPlayerListener videoPlayerListener:videoPlayerListeners){
-                        videoPlayerListener.onVideoSizeChanged(width,height,sarNum,sarDen);
-                    }
+                if (mPlayerListener != null) {
+                    mPlayerListener.onVideoSizeChanged(Player.this, width, height, sarNum, sarDen);
                 }
             }
         });
@@ -412,7 +394,7 @@ class Player implements IPlayer,
     private void startTimeOutBuffer() {
         // 启动定时
         Debuger.printfError("startTimeOutBuffer");
-        mMainThreadHandler.postDelayed(timeoutRunnable, timeOut);
+        mMainThreadHandler.postDelayed(timeoutRunnable, mTimeout);
 
     }
 
@@ -422,19 +404,15 @@ class Player implements IPlayer,
     private void cancelTimeOutBuffer() {
         Debuger.printfError("cancelTimeOutBuffer");
         // 取消定时
-        if (needTimeOutOther){
-            mMainThreadHandler.removeCallbacks(timeoutRunnable);
-        }
+        mMainThreadHandler.removeCallbacks(timeoutRunnable);
     }
 
     private Runnable timeoutRunnable = new Runnable() {
         @Override
         public void run() {
             Debuger.printfError("request time out");
-            if(videoPlayerListeners != null){
-                for(VideoPlayerListener videoPlayerListener:videoPlayerListeners){
-                    videoPlayerListener.onError(BUFFER_TIME_OUT_ERROR,BUFFER_TIME_OUT_ERROR);
-                }
+            if (mPlayerListener != null){
+                mPlayerListener.onError(Player.this, BUFFER_TIME_OUT_ERROR,BUFFER_TIME_OUT_ERROR);
             }
         }
     };
@@ -445,125 +423,107 @@ class Player implements IPlayer,
     }
 
     @Override
-    public void addPlayerListener(VideoPlayerListener listener) {
-        if(videoPlayerListeners == null){
-            videoPlayerListeners = new ArrayList<>();
-        }
-        if(listener == null){
-            throw new IllegalArgumentException("listener should not be null");
-        }
-        videoPlayerListeners.add(listener);
+    public void setPlayerListener(PlayerListener listener) {
+        mPlayerListener = listener;
     }
 
-    @Override
-    public void removePlayerListener(VideoPlayerListener listener) {
-        if(videoPlayerListeners != null){
-            if(listener == null){
-                throw new IllegalArgumentException("listener should not be null");
-            }
-            videoPlayerListeners.remove(listener);
-        }
-    }
 
     private HttpProxyCacheServer getProxy(){
         return CacheHelper.getInstance(mContext).getProxy();
     }
 
     @Override
-    public void url(String url){
-        url(url,null);
-    }
-
-    @Override
-    public void url(String url, boolean needCache) {
-        url(url,null,needCache);
-    }
-
-    @Override
-    public void url(String url, Map<String, String> head){
-        url(url,head,true);
-    }
-
-    @Override
-    public void url(String url, Map<String, String> head, boolean needCache) {
-        VideoModel model = new VideoModel();
-        this.needCache = needCache;
-        if(needCache){
-            url = getProxy().getProxyUrl(url,false);
-            getProxy().registerCacheListener(this,url);
-        }
-        currentUrl = url;
-        model.setUrl(url);
-        if(head != null){
-            model.setMapHeadData(head);
-        }
+    public void videoData(VideoData data) {
         Message msg = mWorkHandler.obtainMessage(HANDLER_PREPARE);
-        msg.obj = model;
+        msg.obj = data;
         mWorkHandler.sendMessage(msg);
-        if(needTimeOutOther){
-            startTimeOutBuffer();
-        }
     }
 
     @Override
     public void start() {
-        if(isInPlaybackState()){
+        if (mStatus == STATUS_PREPARED
+                || mStatus == STATUS_PAUSED
+                || mStatus == STATUS_COMPLETED) {
+            mStatus = STATUS_STARTED;
             mWorkHandler.sendEmptyMessageDelayed(HANDLER_PLAY,200);
-            status = STATUS_PLAYING;
+        } else {
+            Debuger.printfWarning("current status is unsupported this method");
         }
     }
 
     @Override
     public void pause() {
-        if(mMediaPlayer != null && isInPlaybackState()){
-            status = STATUS_PAUSE;
-            mMediaPlayer.pause();
+        if (mStatus == STATUS_STARTED) {
+            mWorkHandler.sendEmptyMessage(HANDLER_PAUSE);
+        } else {
+            Debuger.printfWarning("current status is unsupported this method");
         }
     }
     @Override
     public void setVolume(float v, float v1) {
-        if(mMediaPlayer != null){
-            mMediaPlayer.setVolume(v,v1);
+        if (mStatus != STATUS_ERROR && mStatus != STATUS_END) {
+            mMediaPlayer.setVolume(v, v1);
+        } else {
+            Debuger.printfWarning("current status is unsupported this method");
         }
     }
 
     @Override
     public long getCurrentPosition() {
-        if(mMediaPlayer != null){
+        if (mStatus != STATUS_ERROR
+                && mStatus != STATUS_END) {
             return mMediaPlayer.getCurrentPosition();
+        } else {
+            return 0;
         }
-        return 0;
+
     }
 
     @Override
     public long getDuration() {
-        return mMediaPlayer == null? 0: mMediaPlayer.getDuration();
+        if (mStatus != STATUS_ERROR
+                && mStatus != STATUS_END
+                && mStatus != STATUS_IDLE
+                && mStatus != STATUS_INITIALIZED) {
+            return mMediaPlayer.getDuration();
+        } else {
+            return 0;
+        }
     }
 
     @Override
     public void seekTo(long index) {
-        if(index <0){
-            index = 0;
-        }
-        if(index > getDuration()){
-            index = getDuration();
-        }
-        if(mMediaPlayer != null){
+        if (mStatus == STATUS_PREPARED
+                || mStatus == STATUS_STARTED
+                || mStatus == STATUS_PAUSED
+                || mStatus == STATUS_COMPLETED) {
+            if (index <0) {
+                index = 0;
+            }
+            if (index > getDuration()) {
+                index = getDuration();
+            }
             mMediaPlayer.seekTo(index);
+        } else {
+            Debuger.printfWarning("current status is unsupported this method");
         }
+
     }
 
     @Override
     public void setSpeed(float speed) {
-        if(playerType == PLAYER__IJK && mMediaPlayer != null){
+        mSpeed = speed;
+        if (mPlayerType == PLAYER__IJK && mMediaPlayer != null) {
             ((IjkMediaPlayer)mMediaPlayer).setSpeed(speed);
         }
     }
 
     @Override
     public void setLoop(boolean loop) {
-        if(mMediaPlayer != null){
+        if (mStatus != STATUS_ERROR && mStatus != STATUS_END) {
             mMediaPlayer.setLooping(loop);
+        } else {
+            Debuger.printfWarning("current status is unsupported this method");
         }
     }
 
@@ -581,10 +541,10 @@ class Player implements IPlayer,
     }
 
     @Override
-    public void setNeedMute(boolean needMute) {
-        this.needMute = needMute;
-        if(mMediaPlayer != null){
-            if(needMute){
+    public void setMute(boolean mute) {
+        this.mMute = mute;
+        if (mMediaPlayer != null) {
+            if(mMute){
                 mMediaPlayer.setVolume(0,0);
             }else {
                 mMediaPlayer.setVolume(1,1);
@@ -594,7 +554,43 @@ class Player implements IPlayer,
 
     @Override
     public int getStatus() {
-        return status;
+        return mStatus;
+    }
+
+    @Override
+    public boolean isPlaying() {
+        return mStatus == STATUS_STARTED;
+    }
+
+    @Override
+    public void setScreenOnWhilePlaying(boolean screenOn) {
+        if (mMediaPlayer != null) {
+            mMediaPlayer.setScreenOnWhilePlaying(screenOn);
+        }
+    }
+
+    @Override
+    public MediaInfo getMediaInfo() {
+        if (mMediaPlayer != null) {
+            return mMediaPlayer.getMediaInfo();
+        }
+        return null;
+    }
+
+    @Override
+    public int getVideoWidth() {
+        if (mMediaPlayer != null) {
+            return mMediaPlayer.getVideoWidth();
+        }
+        return 0;
+    }
+
+    @Override
+    public int getVideoHeight() {
+        if (mMediaPlayer != null) {
+            return mMediaPlayer.getVideoHeight();
+        }
+        return 0;
     }
 
     /**
@@ -603,7 +599,7 @@ class Player implements IPlayer,
      * @return
      */
     protected static Player newInstance(@NonNull Context context, @Type int playerType){
-        return new Player(context,playerType);
+        return new Player(context, playerType);
     }
 
 }

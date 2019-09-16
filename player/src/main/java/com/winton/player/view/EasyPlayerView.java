@@ -16,7 +16,6 @@ import android.widget.TextView;
 
 import com.winton.player.IPlayer;
 import com.winton.player.R;
-import com.winton.player.listener.VideoPlayerListenerAdapter;
 import com.winton.player.view.iview.IEasyPlayerView;
 import com.winton.player.view.listener.IEasyPlayerViewListener;
 
@@ -28,32 +27,23 @@ import static tv.danmaku.ijk.media.player.IMediaPlayer.MEDIA_INFO_VIDEO_RENDERIN
  * @time: 2019/1/15 2:04 PM
  * @desc: 播控基类
  */
-public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.OnClickListener,View.OnTouchListener,SeekBar.OnSeekBarChangeListener,SurfaceHolder.Callback {
+public class EasyPlayerView extends FrameLayout implements IEasyPlayerView, View.OnClickListener, View.OnTouchListener, SeekBar.OnSeekBarChangeListener, SurfaceHolder.Callback {
 
     private static final String TAG = "EasyPlayerView";
 
     private View playerView;
-
     private SurfaceView surfaceView;
-
     private ImageView mIVSmallPlay;
-
     private ImageView mIVFullScreen;
-
     private SeekBar mSbProgress;
-
     private TextView mTVCurrentTime;
-
     private TextView mTVTotalView;
 
     private IEasyPlayerViewListener listener;
-
-    private PlayerProxy mPlayerProxy;
-
+    private IPlayer mPlayer;
     public EasyPlayerView(Context context) {
         this(context,null);
     }
-
     public EasyPlayerView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init(context,attrs);
@@ -116,11 +106,11 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
      * @param v
      */
     private void clickPlay(View v) {
-        int statue = mPlayerProxy.getStatus();
-        if(statue == IPlayer.STATUS_PLAYING){
-            mPlayerProxy.pause();
+        int statue = mPlayer.getStatus();
+        if(statue == IPlayer.STATUS_STARTED){
+            mPlayer.pause();
         }else {
-            mPlayerProxy.start();
+            mPlayer.start();
         }
         if(listener != null){
             listener.onClickPlay(v);
@@ -193,21 +183,8 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
 
     @Override
     public void setupPlayer(IPlayer player) {
-        mPlayerProxy = new PlayerProxy(player);
+        mPlayer = player;
         invalidate();
-        mPlayerProxy.addPlayerListener(new VideoPlayerListenerAdapter(){
-            @Override
-            public void onInfo(int what, int extra) {
-                switch (what){
-                    case MEDIA_INFO_VIDEO_RENDERING_START:
-                        //开始缓冲
-                        break;
-                    case MEDIA_INFO_BUFFERING_END:
-                        //缓冲结束
-                        break;
-                }
-            }
-        });
     }
 
     @Override
@@ -217,26 +194,22 @@ public class EasyPlayerView extends FrameLayout implements IEasyPlayerView,View.
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        if(holder != null && mPlayerProxy != null){
-            mPlayerProxy.setDisplay(holder.getSurface());
+        if(holder != null && mPlayer != null){
+            mPlayer.setDisplay(holder.getSurface());
         }
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        if(holder != null && mPlayerProxy != null){
-            mPlayerProxy.setDisplay(holder.getSurface());
+        if(holder != null && mPlayer != null){
+            mPlayer.setDisplay(holder.getSurface());
         }
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        if(mPlayerProxy != null){
-            mPlayerProxy.setDisplay(null);
+        if(mPlayer != null){
+            mPlayer.setDisplay(null);
         }
-    }
-
-    public PlayerProxy getPlayer(){
-        return mPlayerProxy;
     }
 }

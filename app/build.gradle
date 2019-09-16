@@ -27,6 +27,24 @@ android {
             path "CMakeLists.txt"
         }
     }
+    flavorDimensions "abi"
+    productFlavors {
+        allAbi {
+            dimension "abi"
+        }
+        x86 {
+            dimension "abi"
+            ndk{
+                abiFilters  "x86", "x86_64"
+            }
+        }
+        arm {
+            dimension "abi"
+            ndk{
+                abiFilters  "armeabi-v7a", "arm64-v8a"
+            }
+        }
+    }
 
 }
 

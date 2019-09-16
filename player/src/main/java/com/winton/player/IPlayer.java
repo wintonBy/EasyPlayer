@@ -2,9 +2,12 @@ package com.winton.player;
 
 import android.view.Surface;
 
-import com.winton.player.listener.VideoPlayerListener;
+import com.winton.player.listener.PlayerListener;
+import com.winton.player.model.VideoData;
 
 import java.util.Map;
+
+import tv.danmaku.ijk.media.player.MediaInfo;
 
 /**
  * @author: winton
@@ -15,60 +18,35 @@ public interface IPlayer {
     /**
      * 支持的播放器类型
      */
-    int PLAYER__MEDIA = 1;
-    int PLAYER__IJK = 2;
-    int PLAYER__EXO = 3;
+    int PLAYER__MEDIA   = 1;
+    int PLAYER__IJK     = 2;
+    int PLAYER__EXO     = 3;
     /**
      * 播放器状态
      */
-    int STATUS_ERROR = -1;
-    int STATUS_IDLE = 0;
-    int STATUS_PREPARING = 1;
-    int STATE_PREPARED = 2;
-    int STATUS_PLAYING = 3;
-    int STATUS_PAUSE = 4;
-    int STATUS_COMPLETE = 5;
+    int STATUS_ERROR        = -1;
+    int STATUS_IDLE         = 0;
+    int STATUS_INITIALIZED  = 1;
+    int STATUS_PREPARING    = 2;
+    int STATUS_PREPARED     = 3;
+    int STATUS_STARTED      = 4;
+    int STATUS_PAUSED       = 5;
+    int STATUS_COMPLETED    = 6;
+    int STATUS_STOPPED      = 7;
+    int STATUS_END          = 8;
 
 
     /**
      * 设置播放器监听器
      * @param listener
      */
-    void addPlayerListener(VideoPlayerListener listener);
+    void setPlayerListener(PlayerListener listener);
 
     /**
-     * 移除播放器监听
-     * @param listener
+     * 设置video数据
+     * @param data
      */
-    void removePlayerListener(VideoPlayerListener listener);
-
-    /**
-     * 开始播放
-     * @param url
-     */
-    void url(String url);
-
-    /**
-     * 设置播放地址
-     * @param url
-     * @param needCache
-     */
-    void url(String url,boolean needCache);
-
-    /**
-     * 设置播放地址
-     * @param url
-     * @param head
-     */
-    void url(String url , Map<String,String> head);
-
-    /**
-     * 设置播放地址
-     * @param url
-     * @param head
-     * @param needCache
-     */
-    void url(String url,Map<String,String> head,boolean needCache);
+    void videoData(VideoData data);
 
     /**
      * 开始播放
@@ -106,9 +84,9 @@ public interface IPlayer {
 
     /**
      * 设置播放速度
-     * @param speed
+     * @param mSpeed
      */
-    void setSpeed(float speed);
+    void setSpeed(float mSpeed);
 
     /**
      * 设置单曲循环
@@ -129,13 +107,27 @@ public interface IPlayer {
 
     /**
      * 设置静音
-     * @param needMute
+     * @param mMute
      */
-    void setNeedMute(boolean needMute);
+    void setMute(boolean mMute);
 
     /**
      * 获取播放器当前当播放状态
      * @return
      */
     int getStatus();
+
+    boolean isPlaying();
+
+    void setScreenOnWhilePlaying(boolean screenOn);
+
+    /**
+     * 获取mediainfo
+     * @return
+     */
+    MediaInfo getMediaInfo();
+
+    int getVideoWidth();
+
+    int getVideoHeight();
 }
