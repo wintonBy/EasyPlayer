@@ -3,11 +3,8 @@ package com.winton.easyplayer;
 import android.app.Activity;
 import android.os.Bundle;
 
-import com.winton.player.EasyPlayer;
-import com.winton.player.IPlayer;
 import com.winton.player.model.VideoData;
-import com.winton.player.view.EasyPlayerView;
-import com.winton.player.view.SimplePlayerView;
+import com.winton.player.view.TPlayerView;
 
 /**
  * @author: winton
@@ -18,7 +15,7 @@ public class VideoActivity extends Activity {
 
     String testUrl = "http://9890.vod.myqcloud.com/9890_4e292f9a3dd011e6b4078980237cc3d3.f20.mp4";
 
-    private SimplePlayerView simplePlayerView;
+    private TPlayerView simplePlayerView;
 
 
     @Override

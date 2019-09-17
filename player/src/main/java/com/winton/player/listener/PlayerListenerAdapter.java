@@ -2,8 +2,6 @@ package com.winton.player.listener;
 
 import com.winton.player.IPlayer;
 
-import tv.danmaku.ijk.media.player.IMediaPlayer;
-
 /**
  * @author: winton
  * @time: 2019/1/10 6:58 PM

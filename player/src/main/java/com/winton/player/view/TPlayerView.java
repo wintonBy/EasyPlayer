@@ -5,7 +5,6 @@ import android.graphics.SurfaceTexture;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
-import android.media.MediaMetadata;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.view.Surface;
@@ -17,7 +16,6 @@ import com.winton.player.listener.PlayerListener;
 import com.winton.player.listener.PlayerListenerAdapter;
 import com.winton.player.model.VideoData;
 
-import tv.danmaku.ijk.media.player.IjkMediaMeta;
 import tv.danmaku.ijk.media.player.MediaInfo;
 
 import static android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT;
@@ -28,7 +26,7 @@ import static android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT;
  * @time: 2019/1/15 7:41 PM
  * @desc: 最简单的播控，只能播放
  */
-public class SimplePlayerView extends TextureView implements VideoControl {
+public class TPlayerView extends TextureView implements VideoControl {
 
     // all possible internal states
     private static final int STATE_ERROR = -1;
@@ -54,15 +52,18 @@ public class SimplePlayerView extends TextureView implements VideoControl {
     private boolean mCanPause;
     private boolean mCanSeekBack;
     private boolean mCanSeekForward;
+    private int mCurrentBufferPercentage;
     private AudioManager mAudioManager;
     private int mAudioFocusType = AudioManager.AUDIOFOCUS_GAIN; // legacy focus gain
     private AudioAttributes mAudioAttributes;
 
-    public SimplePlayerView(Context context) {
+    private PlayerListener mListener;
+
+    public TPlayerView(Context context) {
         this(context,null);
     }
 
-    public SimplePlayerView(Context context, AttributeSet attrs) {
+    public TPlayerView(Context context, AttributeSet attrs) {
         super(context, attrs);
         mVideoWidth = 0;
         mVideoHeight = 0;
@@ -189,22 +190,22 @@ public class SimplePlayerView extends TextureView implements VideoControl {
 
     @Override
     public int getBufferPercentage() {
-        return 0;
+        return mCurrentBufferPercentage;
     }
 
     @Override
     public boolean canPause() {
-        return false;
+        return mCanPause;
     }
 
     @Override
     public boolean canSeekBackward() {
-        return false;
+        return mCanSeekBack;
     }
 
     @Override
     public boolean canSeekForward() {
-        return false;
+        return mCanSeekForward;
     }
 
     @Override
@@ -263,6 +264,10 @@ public class SimplePlayerView extends TextureView implements VideoControl {
         mPlayer.setDisplay(new Surface(mSurfaceTexture));
         mPlayer.setScreenOnWhilePlaying(true);
 
+    }
+
+    public void setPlayerListener(PlayerListener listener) {
+       mListener = listener;
     }
 
     private SurfaceTextureListener mSurfaceTextureListener = new SurfaceTextureListener() {
@@ -335,6 +340,50 @@ public class SimplePlayerView extends TextureView implements VideoControl {
            if (mSurfaceTexture != null) {
                mSurfaceTexture.setDefaultBufferSize(mVideoWidth, mVideoHeight);
                requestLayout();
+           }
+       }
+
+       @Override
+       public void onCompletion(IPlayer player) {
+           mCurrentState = STATE_PLAYBACK_COMPLETED;
+           mTargetState = STATE_PLAYBACK_COMPLETED;
+           if (mListener != null) {
+               mListener.onCompletion(player);
+           }
+       }
+
+       @Override
+       public boolean onError(IPlayer player, int i, int i1) {
+           mCurrentState = STATE_ERROR;
+           mTargetState = STATE_ERROR;
+           if (mListener != null) {
+               if (mListener.onError(player, i, i1)){
+                   return true;
+               }
+           }
+           return true;
+       }
+
+       @Override
+       public boolean onInfo(IPlayer player, int i, int i1) {
+           if (mListener != null) {
+               mListener.onInfo(player, i, i1);
+           }
+           return true;
+       }
+
+       @Override
+       public void onSeekComplete(IPlayer player) {
+           if (mListener != null) {
+               mListener.onSeekComplete(player);
+           }
+       }
+
+       @Override
+       public void onBufferingUpdate(IPlayer player, int i) {
+           mCurrentBufferPercentage = i;
+           if (mListener != null) {
+               mListener.onBufferingUpdate(player, i);
            }
        }
    };

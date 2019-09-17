@@ -3,8 +3,8 @@ package com.winton.player.view;
 public interface VideoControl {
     void    start();
     void    pause();
-    long     getDuration();
-    long     getCurrentPosition();
+    long    getDuration();
+    long    getCurrentPosition();
     void    seekTo(int pos);
     boolean isPlaying();
     int     getBufferPercentage();
