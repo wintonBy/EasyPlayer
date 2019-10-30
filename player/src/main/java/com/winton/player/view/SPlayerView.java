@@ -205,6 +205,7 @@ public class SPlayerView extends SurfaceView implements VideoControl {
         return 0;
     }
 
+    @Override
     public void setVideoData(VideoData data) {
         mVideo = data;
     }

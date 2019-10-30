@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<resources>
+    <style name="EasyPlayer">
+
+    </style>
+    <style name="EasyPlayer.Play">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:scaleType">fitXY</item>
+        <item name="android:minWidth">60dp</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:padding">15dp</item>
+        <item name="android:src">@drawable/easy_icon_play</item>
+    </style>
+    <style name="EasyPlayer.Full">
+
+    </style>
+</resources>

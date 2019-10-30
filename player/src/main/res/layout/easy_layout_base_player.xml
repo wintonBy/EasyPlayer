@@ -1,24 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/fl_play_ui"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="wrap_content">
     <LinearLayout
         android:id="@+id/ll_bottom_container"
         android:background="@drawable/easy_bottom_control_ui_bg"
         android:orientation="horizontal"
-        android:layout_gravity="bottom"
+        android:gravity="center_vertical"
+        android:minHeight="60dp"
         android:layout_width="match_parent"
-        android:layout_height="60dp">
-        <ImageView
-            android:id="@+id/iv_small_play"
-            android:scaleType="fitXY"
-            android:padding="15dp"
-            android:src="@drawable/easy_icon_pause"
-            android:layout_width="60dp"
-            android:layout_height="match_parent">
-        </ImageView>
+        android:layout_height="wrap_content">
+        <ImageButton
+            style="@style/EasyPlayer.Play"
+            android:id="@+id/iv_small_play"/>
 
         <TextView
             android:id="@+id/tv_current_time"
@@ -54,4 +50,4 @@
 
     </LinearLayout>
 
-</FrameLayout>
+</LinearLayout>

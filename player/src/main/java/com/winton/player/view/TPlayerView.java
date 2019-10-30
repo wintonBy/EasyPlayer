@@ -213,6 +213,7 @@ public class TPlayerView extends TextureView implements VideoControl {
         return 0;
     }
 
+    @Override
     public void setVideoData(VideoData data) {
         mVideo = data;
     }

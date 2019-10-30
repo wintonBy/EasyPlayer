@@ -1,6 +1,10 @@
 package com.winton.player.view;
 
+import com.winton.player.model.VideoData;
+
 public interface VideoControl {
+
+    void    setVideoData(VideoData data);
     void    start();
     void    pause();
     long    getDuration();
