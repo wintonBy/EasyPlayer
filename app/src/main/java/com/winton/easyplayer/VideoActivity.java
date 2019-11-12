@@ -25,8 +25,8 @@ public class VideoActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.act_video);
         simplePlayerView = findViewById(R.id.player);
-        simplePlayerView.getPlayer().setVideoData(new VideoData.Builder(VideoData.TYPE_NETWORK).url(testUrl).build());
-        simplePlayerView.getPlayer().start();
+        simplePlayerView.setVideoData(new VideoData.Builder(VideoData.TYPE_NETWORK).url(testUrl).build());
+        simplePlayerView.start();
     }
 
     @Override

@@ -20,7 +20,6 @@ import tv.danmaku.ijk.media.player.MediaInfo;
 
 import static android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT;
 
-
 /**
  * @author: winton
  * @time: 2019/1/15 7:41 PM
@@ -49,7 +48,8 @@ public class TPlayerView extends TextureView implements VideoControl {
     private int mSurfaceHeight;
 
     private int mSeekWhenPrepared;  // recording the seek position while preparing
-    private boolean mCanPause;
+    //default video can be pause
+    private boolean mCanPause = true;
     private boolean mCanSeekBack;
     private boolean mCanSeekForward;
     private int mCurrentBufferPercentage;

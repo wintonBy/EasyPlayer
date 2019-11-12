@@ -144,11 +144,9 @@ class Player implements IPlayer,
                     doRelease();
                     break;
                 case HANDLER_PLAY:
-                    mStatus = STATUS_STARTED;
                     mMediaPlayer.start();
                     break;
                 case HANDLER_PAUSE :
-                    mStatus = STATUS_PAUSED;
                     mMediaPlayer.pause();
                     break;
                 default:break;
@@ -454,10 +452,12 @@ class Player implements IPlayer,
     @Override
     public void pause() {
         if (mStatus == STATUS_STARTED) {
+            mStatus = STATUS_PAUSED;
             mWorkHandler.sendEmptyMessage(HANDLER_PAUSE);
         } else {
             Debuger.printfWarning("current status is unsupported this method");
         }
+
     }
     @Override
     public void setVolume(float v, float v1) {
