@@ -116,7 +116,12 @@ public class PlayerController extends FrameLayout implements VideoControl{
                 if (!fromUser) {
                     return;
                 }
-                
+                long duration = getDuration();
+                long newPosition = (duration * progress) / 1000L;
+                seekTo((int)newPosition);
+                if (mTVCurrentTime != null) {
+                    mTVCurrentTime.setText(stringForTime(newPosition));
+                }
             }
 
             @Override
@@ -139,6 +144,7 @@ public class PlayerController extends FrameLayout implements VideoControl{
                 post(mShowProgress);
             }
         });
+        mSbProgress.setMax(1000);
     }
 
     private final Runnable mShowProgress = new Runnable() {
