@@ -6,6 +6,7 @@ import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,6 +34,8 @@ public class PlayerController extends FrameLayout implements VideoControl{
 
     private static final String TAG = "EasyPlayerView";
 
+    private static final int mDefaultTimeout = 3000;
+
     private Context mContext;
 
     private View mController;
@@ -41,7 +44,7 @@ public class PlayerController extends FrameLayout implements VideoControl{
     private SeekBar mSbProgress;
     private TextView mTVCurrentTime;
     private TextView mTVTotalView;
-    
+
     private boolean mShowing;
     private boolean mDragging;
 
@@ -96,6 +99,7 @@ public class PlayerController extends FrameLayout implements VideoControl{
                     mVideoView.start();
                 }
                 updatePausePlay();
+                show(mDefaultTimeout);
             }
         });
 
@@ -105,7 +109,47 @@ public class PlayerController extends FrameLayout implements VideoControl{
 
             }
         });
+
+        mSbProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (!fromUser) {
+                    return;
+                }
+                
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                show(3600000);
+                mDragging = true;
+                //when drag, don't update progress
+                removeCallbacks(mShowProgress);
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                mDragging = false;
+                setProgress();
+                updatePausePlay();
+                show(mDefaultTimeout);
+                // Ensure that progress is properly updated in the future,
+                // the call to show() does not guarantee this because it is a
+                // no-op if we are already showing.
+                post(mShowProgress);
+            }
+        });
     }
+
+    private final Runnable mShowProgress = new Runnable() {
+        @Override
+        public void run() {
+            long pos = setProgress();
+            if (!mDragging && mShowing && isPlaying()) {
+                postDelayed(mShowProgress, 1000 - (pos % 1000));
+            }
+        }
+    };
 
     private void updatePausePlay() {
         if (mIVSmallPlay == null) {
@@ -117,6 +161,7 @@ public class PlayerController extends FrameLayout implements VideoControl{
             mIVSmallPlay.setImageResource(R.drawable.easy_icon_play);
         }
     }
+
     private String stringForTime(long timeMs) {
         long totalSeconds = timeMs / 1000;
         long seconds = totalSeconds % 60;
@@ -155,6 +200,57 @@ public class PlayerController extends FrameLayout implements VideoControl{
         return position;
     }
 
+    private void show(int timeout) {
+        if (!mShowing && mController != null) {
+            setProgress();
+            mController.setVisibility(VISIBLE);
+            mShowing = true;
+        }
+        updatePausePlay();
+        // cause the progress bar to be updated even if mShowing
+        // was already true.  This happens, for example, if we're
+        // paused with the progress bar showing the user hits play.
+        post(mShowProgress);
+
+        if (timeout != 0) {
+            removeCallbacks(mFadeOut);
+            postDelayed(mFadeOut, timeout);
+        }
+    }
+
+    private Runnable mFadeOut = new Runnable() {
+        @Override
+        public void run() {
+            hide();
+        }
+    };
+
+    private void hide() {
+        if (mController == null) {
+            return;
+        }
+        if (mShowing) {
+            removeCallbacks(mShowProgress);
+            mController.setVisibility(GONE);
+        }
+        mShowing = false;
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                show(0);
+                break;
+            case MotionEvent.ACTION_UP:
+                show(mDefaultTimeout);
+                break;
+            case MotionEvent.ACTION_CANCEL:
+                hide();
+                break;
+        }
+        return true;
+    }
 
     @Override
     public void setVideoData(VideoData data) {
