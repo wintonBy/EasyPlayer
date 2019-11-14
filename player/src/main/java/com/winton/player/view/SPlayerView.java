@@ -49,6 +49,8 @@ public class SPlayerView extends SurfaceView implements VideoControl {
     private int mAudioFocusType = AudioManager.AUDIOFOCUS_GAIN; // legacy focus gain
     private AudioAttributes mAudioAttributes;
 
+    private PlayerController mPlayerController;
+
     private PlayerListener mListener;
 
     public SPlayerView(Context context) {
@@ -209,6 +211,22 @@ public class SPlayerView extends SurfaceView implements VideoControl {
     public void setVideoData(VideoData data) {
         mVideo = data;
     }
+
+    public void setPlayerController(PlayerController controller) {
+        if (mPlayerController != null) {
+            mPlayerController.hide();
+        }
+        mPlayerController = controller;
+        attachPlayerController();
+    }
+
+    private void attachPlayerController() {
+        if (mPlayer != null && mPlayerController != null) {
+
+        }
+    }
+
+
 
     private boolean isInPlaybackState() {
         return (mPlayer != null &&

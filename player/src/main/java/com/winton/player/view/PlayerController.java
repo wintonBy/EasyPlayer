@@ -2,24 +2,18 @@ package com.winton.player.view;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import com.winton.player.IPlayer;
 import com.winton.player.R;
-import com.winton.player.model.VideoData;
 import com.winton.player.view.listener.IEasyPlayerViewListener;
 
 import java.util.Formatter;
@@ -30,7 +24,7 @@ import java.util.Locale;
  * @time: 2019/1/15 2:04 PM
  * @desc: 播控基类
  */
-public class PlayerController extends FrameLayout implements VideoControl{
+public class PlayerController extends FrameLayout{
 
     private static final String TAG = "EasyPlayerView";
 
@@ -38,7 +32,8 @@ public class PlayerController extends FrameLayout implements VideoControl{
 
     private Context mContext;
 
-    private View mController;
+    private View mAnchor;
+    private View mRoot;
     private ImageView mIVSmallPlay;
     private ImageView mIVFullScreen;
     private SeekBar mSbProgress;
@@ -48,110 +43,136 @@ public class PlayerController extends FrameLayout implements VideoControl{
     private boolean mShowing;
     private boolean mDragging;
 
-    private VideoControl mVideoView;
+    private VideoControl mPlayer;
 
     private IEasyPlayerViewListener listener;
-    private IPlayer mPlayer;
 
     private StringBuilder mFormatBuilder;
     private Formatter mFormatter;
 
     public PlayerController(@NonNull Context context) {
-        this(context, null);
-    }
-
-    public PlayerController(@NonNull Context context, @Nullable AttributeSet attrs) {
-        super(context, attrs);
+        super(context);
         this.mContext = context;
-        init(attrs);
+        initControllerView();
     }
 
-    private void init(AttributeSet attrs) {
-        mController = LayoutInflater.from(mContext).inflate(R.layout.easy_layout_base_player, null);
-        mIVSmallPlay = mController.findViewById(R.id.iv_small_play);
-        mIVFullScreen = mController.findViewById(R.id.iv_full_screen);
-        mSbProgress = mController.findViewById(R.id.sb_progress);
-        mTVCurrentTime = mController.findViewById(R.id.tv_current_time);
-        mTVTotalView = mController.findViewById(R.id.tv_total_time);
+    public void setMediaPlayer(VideoControl player) {
+        mPlayer = player;
+        updatePausePlay();
+    }
 
+    /**
+      * Set the view that acts as the anchor for the control view.
+      * This can for example be a VideoView, or your Activity's main view.
+      * When VideoView calls this method, it will use the VideoView's parent
+      * as the anchor.
+      * @param view The view to which to anchor the controller when it is visible.
+      */
+    public void setAnchorView(View view) {
+        if (mAnchor != null) {
+            mAnchor.removeOnLayoutChangeListener(mLayoutChangeListener);
+        }
+        mAnchor = view;
+        if (mAnchor != null) {
+            mAnchor.addOnLayoutChangeListener(mLayoutChangeListener);
+        }
+
+        FrameLayout.LayoutParams frameParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT);
+
+        removeAllViews();
+        View v = makeControllerView();
+        addView(v, frameParams);
+    }
+
+    private View makeControllerView() {
+        mRoot = LayoutInflater.from(mContext).inflate(R.layout.easy_layout_base_player, null);
+        initControllerView(mRoot);
+        return mRoot;
+    }
+
+
+    private void initControllerView(View v) {
+        mIVSmallPlay = v.findViewById(R.id.iv_small_play);
+        if (mIVSmallPlay != null) {
+            mIVSmallPlay.requestFocus();
+            mIVSmallPlay.setOnClickListener(mPauseListener);
+        }
+
+        mIVFullScreen = mRoot.findViewById(R.id.iv_full_screen);
+        mSbProgress = mRoot.findViewById(R.id.sb_progress);
+        if (mSbProgress != null) {
+            mSbProgress.setOnSeekBarChangeListener(mSeekListener);
+            mSbProgress.setMax(1000);
+        }
+        mTVCurrentTime = mRoot.findViewById(R.id.tv_current_time);
+        mTVTotalView = mRoot.findViewById(R.id.tv_total_time);
         mFormatBuilder = new StringBuilder();
         mFormatter = new Formatter(mFormatBuilder, Locale.getDefault());
-
-        mVideoView = new TPlayerView(mContext);
-        FrameLayout.LayoutParams videoParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                Gravity.TOP);
-        this.addView((TextureView)mVideoView, videoParams);
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM);
-        this.addView(mController, params);
-        initListener();
     }
 
-    private void initListener() {
-        mIVSmallPlay.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (mVideoView.isPlaying() && mVideoView.canPause()) {
-                    mVideoView.pause();
-                } else {
-                    mVideoView.start();
-                }
-                updatePausePlay();
-                show(mDefaultTimeout);
-            }
-        });
+    // This is called whenever mAnchor's layout bound changes
+    private final OnLayoutChangeListener mLayoutChangeListener = new OnLayoutChangeListener() {
+         @Override
+         public void onLayoutChange(View v, int left, int top, int right,
+                 int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+         }
+    };
 
-        mIVFullScreen.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
+    private final OnClickListener mPauseListener = new OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            if (mPlayer.isPlaying() && mPlayer.canPause()) {
+                mPlayer.pause();
+            } else {
+                mPlayer.start();
             }
-        });
+            updatePausePlay();
+            show(mDefaultTimeout);
+        }
+    };
 
-        mSbProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (!fromUser) {
-                    return;
-                }
-                long duration = getDuration();
-                long newPosition = (duration * progress) / 1000L;
-                seekTo((int)newPosition);
-                if (mTVCurrentTime != null) {
-                    mTVCurrentTime.setText(stringForTime(newPosition));
-                }
+    private final SeekBar.OnSeekBarChangeListener mSeekListener = new SeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if (!fromUser) {
+                return;
             }
+            long duration = mPlayer.getDuration();
+            long newPosition = (duration * progress) / 1000L;
+            mPlayer.seekTo((int)newPosition);
+            if (mTVCurrentTime != null) {
+                mTVCurrentTime.setText(stringForTime(newPosition));
+            }
+        }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                show(3600000);
-                mDragging = true;
-                //when drag, don't update progress
-                removeCallbacks(mShowProgress);
-            }
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+            show(3600000);
+            mDragging = true;
+            //when drag, don't update progress
+            removeCallbacks(mShowProgress);
+        }
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                mDragging = false;
-                setProgress();
-                updatePausePlay();
-                show(mDefaultTimeout);
-                // Ensure that progress is properly updated in the future,
-                // the call to show() does not guarantee this because it is a
-                // no-op if we are already showing.
-                post(mShowProgress);
-            }
-        });
-        mSbProgress.setMax(1000);
-    }
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+            mDragging = false;
+            setProgress();
+            updatePausePlay();
+            show(mDefaultTimeout);
+            // Ensure that progress is properly updated in the future,
+            // the call to show() does not guarantee this because it is a
+            // no-op if we are already showing.
+            post(mShowProgress);
+        }
+    };
 
     private final Runnable mShowProgress = new Runnable() {
         @Override
         public void run() {
             long pos = setProgress();
-            if (!mDragging && mShowing && isPlaying()) {
+            if (!mDragging && mShowing && mPlayer.isPlaying()) {
                 postDelayed(mShowProgress, 1000 - (pos % 1000));
             }
         }
@@ -161,7 +182,7 @@ public class PlayerController extends FrameLayout implements VideoControl{
         if (mIVSmallPlay == null) {
             return;
         }
-        if (mVideoView.isPlaying()) {
+        if (mPlayer.isPlaying()) {
             mIVSmallPlay.setImageResource(R.drawable.easy_icon_pause);
         } else {
             mIVSmallPlay.setImageResource(R.drawable.easy_icon_play);
@@ -182,18 +203,18 @@ public class PlayerController extends FrameLayout implements VideoControl{
     }
 
     private long setProgress() {
-        if (mVideoView == null || mDragging) {
+        if (mPlayer == null || mDragging) {
             return 0;
         }
-        long position = getCurrentPosition();
-        long duration = getDuration();
+        long position = mPlayer.getCurrentPosition();
+        long duration = mPlayer.getDuration();
         if (mSbProgress != null) {
             if (duration > 0) {
                     // use long to avoid overflow
                     long pos = 1000L * position / duration;
                     mSbProgress.setProgress( (int) pos);
                 }
-            int percent = getBufferPercentage();
+            int percent = mPlayer.getBufferPercentage();
             mSbProgress.setSecondaryProgress(percent * 10);
         }
 
@@ -207,9 +228,9 @@ public class PlayerController extends FrameLayout implements VideoControl{
     }
 
     private void show(int timeout) {
-        if (!mShowing && mController != null) {
+        if (!mShowing && mRoot != null) {
             setProgress();
-            mController.setVisibility(VISIBLE);
+            mRoot.setVisibility(VISIBLE);
             mShowing = true;
         }
         updatePausePlay();
@@ -231,15 +252,23 @@ public class PlayerController extends FrameLayout implements VideoControl{
         }
     };
 
-    private void hide() {
-        if (mController == null) {
+    public void hide() {
+        if (mRoot == null) {
             return;
         }
         if (mShowing) {
             removeCallbacks(mShowProgress);
-            mController.setVisibility(GONE);
+            mRoot.setVisibility(GONE);
         }
         mShowing = false;
+    }
+
+    public void show() {
+        show(mDefaultTimeout);
+    }
+
+    public boolean isShowing() {
+        return mShowing;
     }
 
     @Override
@@ -259,103 +288,9 @@ public class PlayerController extends FrameLayout implements VideoControl{
     }
 
     @Override
-    public void setVideoData(VideoData data) {
-        if (mVideoView == null) {
-            return;
-        }
-        mVideoView.setVideoData(data);
-    }
-
-    @Override
-    public void start() {
-        if (mVideoView == null) {
-            return;
-        }
-        mVideoView.start();
-        if (mIVSmallPlay != null) {
-            mIVSmallPlay.setImageResource(R.drawable.easy_icon_pause);
-        }
-    }
-
-    @Override
-    public void pause() {
-        if (mVideoView == null) {
-            return;
-        }
-        mVideoView.pause();
-        mIVSmallPlay.setImageResource(R.drawable.easy_icon_play);
-    }
-
-    @Override
-    public long getDuration() {
-        if (mVideoView == null) {
-            return 0;
-        }
-        return mVideoView.getDuration();
-    }
-
-    @Override
-    public long getCurrentPosition() {
-        if (mVideoView == null) {
-            return 0;
-        }
-        return mVideoView.getCurrentPosition();
-    }
-
-    @Override
-    public void seekTo(int pos) {
-        if (mVideoView == null) {
-            return;
-        }
-        mVideoView.seekTo(pos);
-    }
-
-    @Override
-    public boolean isPlaying() {
-        if(mVideoView == null) {
-            return false;
-        }
-        return mVideoView.isPlaying();
-    }
-
-    @Override
-    public int getBufferPercentage() {
-        if(mVideoView == null) {
-            return 0;
-        }
-        return mVideoView.getBufferPercentage();
-    }
-
-    @Override
-    public boolean canPause() {
-        if(mVideoView == null) {
-            return true;
-        }
-        return mVideoView.canPause();
-    }
-
-    @Override
-    public boolean canSeekBackward() {
-        if(mVideoView == null) {
-            return false;
-        }
-        return mVideoView.canSeekBackward();
-    }
-
-    @Override
-    public boolean canSeekForward() {
-        if(mVideoView == null) {
-            return false;
-        }
-        return mVideoView.canSeekBackward();
-    }
-
-    @Override
-    public int getAudioSessionId() {
-        if(mVideoView == null) {
-            return -1;
-        }
-        return mVideoView.getAudioSessionId();
+    public boolean onTrackballEvent(MotionEvent event) {
+        show(mDefaultTimeout);
+        return false;
     }
 
     //    @Override
