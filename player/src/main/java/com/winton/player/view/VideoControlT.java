@@ -25,7 +25,7 @@ import static android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT;
  * @time: 2019/1/15 7:41 PM
  * @desc: 最简单的播控，只能播放
  */
-public class TPlayerView extends TextureView implements VideoControl {
+public class VideoControlT extends TextureView implements IVideoControl {
 
     // all possible internal states
     private static final int STATE_ERROR = -1;
@@ -57,13 +57,15 @@ public class TPlayerView extends TextureView implements VideoControl {
     private int mAudioFocusType = AudioManager.AUDIOFOCUS_GAIN; // legacy focus gain
     private AudioAttributes mAudioAttributes;
 
+    private IPlayerController mController;
+
     private PlayerListener mListener;
 
-    public TPlayerView(Context context) {
+    public VideoControlT(Context context) {
         this(context,null);
     }
 
-    public TPlayerView(Context context, AttributeSet attrs) {
+    public VideoControlT(Context context, AttributeSet attrs) {
         super(context, attrs);
         mVideoWidth = 0;
         mVideoHeight = 0;
@@ -182,6 +184,15 @@ public class TPlayerView extends TextureView implements VideoControl {
             mSeekWhenPrepared = pos;
         }
     }
+
+    @Override
+    public void setPlayerController(IPlayerController controller) {
+        if (mController != null) {
+            mController.hide();
+        }
+        mController = controller;
+    }
+
 
     @Override
     public boolean isPlaying() {

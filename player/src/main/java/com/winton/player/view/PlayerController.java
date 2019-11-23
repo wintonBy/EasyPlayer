@@ -2,10 +2,11 @@ package com.winton.player.view;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
-import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -14,6 +15,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.winton.player.R;
+import com.winton.player.model.VideoData;
 import com.winton.player.view.listener.IEasyPlayerViewListener;
 
 import java.util.Formatter;
@@ -24,7 +26,7 @@ import java.util.Locale;
  * @time: 2019/1/15 2:04 PM
  * @desc: 播控基类
  */
-public class PlayerController extends FrameLayout{
+public class PlayerController extends FrameLayout implements IPlayerController{
 
     private static final String TAG = "EasyPlayerView";
 
@@ -32,7 +34,6 @@ public class PlayerController extends FrameLayout{
 
     private Context mContext;
 
-    private View mAnchor;
     private View mRoot;
     private ImageView mIVSmallPlay;
     private ImageView mIVFullScreen;
@@ -42,8 +43,9 @@ public class PlayerController extends FrameLayout{
 
     private boolean mShowing;
     private boolean mDragging;
+    private boolean mFullScreen;
 
-    private VideoControl mPlayer;
+    private IVideoControl mPlayer;
 
     private IEasyPlayerViewListener listener;
 
@@ -51,39 +53,34 @@ public class PlayerController extends FrameLayout{
     private Formatter mFormatter;
 
     public PlayerController(@NonNull Context context) {
-        super(context);
+        this(context, null);
+    }
+
+    public PlayerController(@NonNull Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
         this.mContext = context;
-        initControllerView();
+        init(attrs);
     }
 
-    public void setMediaPlayer(VideoControl player) {
-        mPlayer = player;
-        updatePausePlay();
-    }
+    private void init(@Nullable AttributeSet attrs) {
+        mPlayer = new VideoControlS(mContext);
+        mPlayer.setPlayerController(this);
 
-    /**
-      * Set the view that acts as the anchor for the control view.
-      * This can for example be a VideoView, or your Activity's main view.
-      * When VideoView calls this method, it will use the VideoView's parent
-      * as the anchor.
-      * @param view The view to which to anchor the controller when it is visible.
-      */
-    public void setAnchorView(View view) {
-        if (mAnchor != null) {
-            mAnchor.removeOnLayoutChangeListener(mLayoutChangeListener);
-        }
-        mAnchor = view;
-        if (mAnchor != null) {
-            mAnchor.addOnLayoutChangeListener(mLayoutChangeListener);
-        }
-
+        int playerGravity = Gravity.TOP | Gravity.LEFT;
         FrameLayout.LayoutParams frameParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT);
+                ViewGroup.LayoutParams.MATCH_PARENT, playerGravity);
 
-        removeAllViews();
+        View player = (View) mPlayer;
+        addView(player, frameParams);
+
+        int controllerGravity = Gravity.BOTTOM | Gravity.LEFT;
+        FrameLayout.LayoutParams controllerParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, controllerGravity);
+
         View v = makeControllerView();
-        addView(v, frameParams);
+        addView(v, controllerParams);
     }
 
     private View makeControllerView() {
@@ -91,7 +88,6 @@ public class PlayerController extends FrameLayout{
         initControllerView(mRoot);
         return mRoot;
     }
-
 
     private void initControllerView(View v) {
         mIVSmallPlay = v.findViewById(R.id.iv_small_play);
@@ -116,7 +112,7 @@ public class PlayerController extends FrameLayout{
     private final OnLayoutChangeListener mLayoutChangeListener = new OnLayoutChangeListener() {
          @Override
          public void onLayoutChange(View v, int left, int top, int right,
-                 int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+             int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
          }
     };
 
@@ -130,6 +126,17 @@ public class PlayerController extends FrameLayout{
             }
             updatePausePlay();
             show(mDefaultTimeout);
+        }
+    };
+
+    private final OnClickListener mFullScreenListener = new OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            if (mFullScreen) {
+
+            } else {
+
+            }
         }
     };
 
@@ -222,12 +229,12 @@ public class PlayerController extends FrameLayout{
             mTVTotalView.setText(stringForTime(duration));
         }
         if (mTVCurrentTime != null) {
-                mTVCurrentTime.setText(stringForTime(position));
+            mTVCurrentTime.setText(stringForTime(position));
         }
         return position;
     }
 
-    private void show(int timeout) {
+    public void show(int timeout) {
         if (!mShowing && mRoot != null) {
             setProgress();
             mRoot.setVisibility(VISIBLE);
@@ -252,6 +259,7 @@ public class PlayerController extends FrameLayout{
         }
     };
 
+    @Override
     public void hide() {
         if (mRoot == null) {
             return;
@@ -263,6 +271,7 @@ public class PlayerController extends FrameLayout{
         mShowing = false;
     }
 
+    @Override
     public void show() {
         show(mDefaultTimeout);
     }
@@ -293,13 +302,49 @@ public class PlayerController extends FrameLayout{
         return false;
     }
 
-    //    @Override
-//    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-//        int width = MeasureSpec.getSize(widthMeasureSpec);
-//        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
-//        int height = MeasureSpec.getSize(heightMeasureSpec);
-//        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
-//    }
+    public void setVideoData(VideoData data) {
+        if (mPlayer != null) {
+            mPlayer.setVideoData(data);
+        }
+    }
 
+    public void start() {
+        if (mPlayer != null) {
+            mPlayer.start();
+        }
+    }
+
+    public void pause() {
+        if (mPlayer != null) {
+            mPlayer.pause();
+        }
+    }
+
+    public long getDuration() {
+        if (mPlayer != null) {
+            mPlayer.getDuration();
+        }
+        return 0;
+    }
+
+    public long getCurrentPosition() {
+        if (mPlayer != null) {
+            mPlayer.getCurrentPosition();
+        }
+        return 0;
+    }
+
+    public void seekTo(int pos) {
+        if (mPlayer != null) {
+            mPlayer.seekTo(pos);
+        }
+    }
+
+    public boolean isPlaying() {
+        if (mPlayer != null) {
+            return mPlayer.isPlaying();
+        }
+        return false;
+    }
 
 }

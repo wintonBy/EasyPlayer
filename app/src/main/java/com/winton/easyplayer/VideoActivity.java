@@ -5,8 +5,6 @@ import android.os.Bundle;
 
 import com.winton.player.model.VideoData;
 import com.winton.player.view.PlayerController;
-import com.winton.player.view.SPlayerView;
-import com.winton.player.view.TPlayerView;
 
 /**
  * @author: winton

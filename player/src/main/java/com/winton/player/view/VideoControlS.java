@@ -19,7 +19,7 @@ import tv.danmaku.ijk.media.player.MediaInfo;
 
 import static android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT;
 
-public class SPlayerView extends SurfaceView implements VideoControl {
+public class VideoControlS extends SurfaceView implements IVideoControl {
     // all possible internal states
     private static final int STATE_ERROR = -1;
     private static final int STATE_IDLE = 0;
@@ -49,15 +49,15 @@ public class SPlayerView extends SurfaceView implements VideoControl {
     private int mAudioFocusType = AudioManager.AUDIOFOCUS_GAIN; // legacy focus gain
     private AudioAttributes mAudioAttributes;
 
-    private PlayerController mPlayerController;
+    private IPlayerController mController;
 
     private PlayerListener mListener;
 
-    public SPlayerView(Context context) {
+    public VideoControlS(Context context) {
         this(context,null);
     }
 
-    public SPlayerView(Context context, AttributeSet attrs) {
+    public VideoControlS(Context context, AttributeSet attrs) {
         super(context, attrs);
         mVideoWidth = 0;
         mVideoHeight = 0;
@@ -212,20 +212,13 @@ public class SPlayerView extends SurfaceView implements VideoControl {
         mVideo = data;
     }
 
-    public void setPlayerController(PlayerController controller) {
-        if (mPlayerController != null) {
-            mPlayerController.hide();
+    @Override
+    public void setPlayerController(IPlayerController controller) {
+        if (mController != null) {
+            mController.hide();
         }
-        mPlayerController = controller;
-        attachPlayerController();
+        mController = controller;
     }
-
-    private void attachPlayerController() {
-        if (mPlayer != null && mPlayerController != null) {
-
-        }
-    }
-
 
 
     private boolean isInPlaybackState() {
@@ -268,13 +261,13 @@ public class SPlayerView extends SurfaceView implements VideoControl {
                 mAudioManager.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AUDIOFOCUS_GAIN_TRANSIENT);
             }
         }
-        mCurrentState = STATE_PREPARING;
         mPlayer = EasyPlayer.newInstance(getContext(), IPlayer.PLAYER__IJK);
         mPlayer.setPlayerListener(mPlayerListener);
         mPlayer.videoData(mVideo);
         mPlayer.setDisplay(mSurfaceHolder.getSurface());
         mPlayer.setScreenOnWhilePlaying(true);
-
+        mCurrentState = STATE_PREPARING;
+        mController.show();
     }
 
     public void setPlayerListener(PlayerListener listener) {
@@ -305,6 +298,7 @@ public class SPlayerView extends SurfaceView implements VideoControl {
         @Override
         public void surfaceDestroyed(SurfaceHolder holder) {
             mSurfaceHolder = null;
+            if (mController != null) mController.hide();
             release(true);
         }
     };
@@ -314,7 +308,7 @@ public class SPlayerView extends SurfaceView implements VideoControl {
         @Override
         public void onPrepared(IPlayer player) {
             mCurrentState = STATE_PREPARED;
-            MediaInfo mediaInfo = player.getMediaInfo();
+            mCanPause = mCanSeekBack = mCanSeekForward = true;
             mVideoWidth = player.getVideoWidth();
             mVideoHeight = player.getVideoHeight();
             int seekPosition = mSeekWhenPrepared;
@@ -326,6 +320,14 @@ public class SPlayerView extends SurfaceView implements VideoControl {
                 if (mVideoWidth == mSurfaceWidth && mVideoHeight == mSurfaceHeight) {
                     if (mTargetState == STATE_PLAYING) {
                         start();
+                        if (mController != null) {
+                            mController.show();
+                        }
+                    } else if (!isPlaying() &&(seekPosition != 0 || getCurrentPosition() > 0)) {
+                        if (mController != null) {
+                            // Show the media controls when we're paused into a video and make 'em stick.
+                            mController.show(0);
+                         }
                     }
                 } else {
                     if (mTargetState == STATE_PLAYING) {
@@ -349,6 +351,9 @@ public class SPlayerView extends SurfaceView implements VideoControl {
         public void onCompletion(IPlayer player) {
             mCurrentState = STATE_PLAYBACK_COMPLETED;
             mTargetState = STATE_PLAYBACK_COMPLETED;
+            if (mController != null) {
+                mController.hide();
+            }
             if (mListener != null) {
                 mListener.onCompletion(player);
             }
@@ -358,6 +363,10 @@ public class SPlayerView extends SurfaceView implements VideoControl {
         public boolean onError(IPlayer player, int i, int i1) {
             mCurrentState = STATE_ERROR;
             mTargetState = STATE_ERROR;
+            if (mController != null) {
+                mController.hide();
+            }
+
             if (mListener != null) {
                 if (mListener.onError(player, i, i1)){
                     return true;

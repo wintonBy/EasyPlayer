@@ -2,7 +2,7 @@ package com.winton.player.view;
 
 import com.winton.player.model.VideoData;
 
-public interface VideoControl {
+public interface IVideoControl {
 
     void    setVideoData(VideoData data);
     void    start();
@@ -22,4 +22,6 @@ public interface VideoControl {
       * @return The audio session, or 0 if there was an error.
       */
     int     getAudioSessionId();
+
+    void setPlayerController(IPlayerController controller);
 }
